@@ -3,8 +3,9 @@ const path = require('path');
 
 const OLLAMA_URL = 'http://172.31.0.210:11434';
 const EMBED_MODEL = 'nomic-embed-text:latest';
-const KNOWLEDGE_DIR = path.join(__dirname, 'knowledge');
-const VECTORS_FILE = path.join(__dirname, 'vectors.json');
+const ROOT = path.join(__dirname, '..');
+const KNOWLEDGE_DIR = path.join(ROOT, 'knowledge');
+const VECTORS_FILE = path.join(ROOT, 'data', 'vectors.json');
 
 // 문서를 청크로 분할 (## 헤딩 기준)
 function splitChunks(filename, content) {

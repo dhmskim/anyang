@@ -1326,7 +1326,7 @@ address { font-style: normal; }
 
 /* 봇 메시지 스피커 버튼 */
 .chat-msg.bot {
-    padding-bottom: 0;
+    padding-bottom: 10px;
 }
 
 .tts-speak-btn {
@@ -1365,7 +1365,7 @@ address { font-style: normal; }
 .chatbot-body {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
+    padding: 16px 16px 80px;
     background: #f5f7fa;
     display: flex;
     flex-direction: column;

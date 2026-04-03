@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 - 안양수목원 주차 챗봇</title>
+    <link rel="stylesheet" href="css/manager.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="admin-layout">
+    <!-- 사이드바 -->
+    <nav class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-tree"></i>
+            <div>
+                <h1>관리자 페이지</h1>
+                <span>안양수목원 주차 챗봇</span>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="active" data-page="conversations"><i class="fas fa-comments"></i> 대화 내역</li>
+            <li data-page="counselor"><i class="fas fa-headset"></i> 상담원 요청 <span class="badge" id="counselorBadge"></span></li>
+            <li data-page="settings"><i class="fas fa-cog"></i> 기타 관리</li>
+        </ul>
+    </nav>
+
+    <!-- 메인 -->
+    <main class="main-content">
+        <!-- 페이지 1: 대화 내역 -->
+        <section class="page active" id="page-conversations">
+            <div class="page-header">
+                <h2><i class="fas fa-comments"></i> 챗봇 대화 내역</h2>
+                <button class="refresh-btn" onclick="loadConversations()"><i class="fas fa-sync-alt"></i> 새로고침</button>
+            </div>
+            <div class="content-split">
+                <div class="list-panel" id="convList">
+                    <div class="empty-state">대화 내역이 없습니다.</div>
+                </div>
+                <div class="detail-panel" id="convDetail">
+                    <div class="empty-state">좌측 목록에서 대화를 선택하세요.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 페이지 2: 상담원 요청 -->
+        <section class="page" id="page-counselor">
+            <div class="page-header">
+                <h2><i class="fas fa-headset"></i> 상담원 연결 요청</h2>
+                <button class="refresh-btn" onclick="loadCounselorRequests()"><i class="fas fa-sync-alt"></i> 새로고침</button>
+            </div>
+            <div class="content-split">
+                <div class="list-panel" id="counselorList">
+                    <div class="empty-state">상담 요청이 없습니다.</div>
+                </div>
+                <div class="detail-panel" id="counselorDetail">
+                    <div class="empty-state">좌측 목록에서 요청을 선택하세요.</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 페이지 3: 기타 관리 -->
+        <section class="page" id="page-settings">
+            <div class="page-header">
+                <h2><i class="fas fa-cog"></i> 기타 관리</h2>
+            </div>
+            <div class="settings-content">
+                <div class="setting-card">
+                    <h3><i class="fas fa-file-alt"></i> 지식 문서 관리</h3>
+                    <p>knowledge/ 폴더의 .md 파일을 추가·수정하면 AI 답변에 자동 반영됩니다.</p>
+                </div>
+                <div class="setting-card">
+                    <h3><i class="fas fa-database"></i> 데이터 저장 현황</h3>
+                    <p>대화 내역: data/conversations.json<br>상담 요청: data/counselor_requests.json</p>
+                </div>
+                <div class="setting-card">
+                    <h3><i class="fas fa-project-diagram"></i> 추후 확장 예정</h3>
+                    <p>예약 통계 대시보드, 사용자 관리, 주차장 설정 등</p>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="js/manager.js"></script>
+</body>
+</html>

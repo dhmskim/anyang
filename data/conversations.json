@@ -1,0 +1,48 @@
+{
+  "session_1775204363288": {
+    "sessionId": "session_1775204363288",
+    "createdAt": "2026-04-03T08:19:37.548Z",
+    "messages": [
+      {
+        "role": "user",
+        "content": "대화 종료",
+        "timestamp": "2026-04-03T08:19:37.548Z"
+      },
+      {
+        "role": "assistant",
+        "content": "안녕하세요, 이용해주셔서 감사합니다. 언제든 다시 도움이 필요하시면 연락주세요. 좋은 하루 보내세요!",
+        "timestamp": "2026-04-03T08:19:43.453Z"
+      },
+      {
+        "role": "user",
+        "content": "주차",
+        "timestamp": "2026-04-03T08:19:51.111Z"
+      },
+      {
+        "role": "assistant",
+        "content": "안녕하세요. 서울대 안양수목원 주차장을 이용하시려면 사전예약이 필수입니다. 주차장은 총 50면이며, 모든 면이 사전예약제로 운영됩니다. 주차예약은 어떻게 진행하시면 좋을까요?",
+        "timestamp": "2026-04-03T08:19:58.893Z"
+      }
+    ],
+    "reservations": [],
+    "counselorRequested": false
+  },
+  "session_1775204428645": {
+    "sessionId": "session_1775204428645",
+    "createdAt": "2026-04-03T08:20:32.416Z",
+    "messages": [
+      {
+        "role": "user",
+        "content": "ㅇ줌",
+        "timestamp": "2026-04-03T08:20:32.416Z"
+      },
+      {
+        "role": "assistant",
+        "content": "주차 관련 안내만 도와드릴 수 있습니다. 그 외 문의는 관리사무소(031-470-0242)로 연락해 주세요.",
+        "timestamp": "2026-04-03T08:20:38.828Z"
+      }
+    ],
+    "reservations": [],
+    "counselorRequested": false
+  }
+}
