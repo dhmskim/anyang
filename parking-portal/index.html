@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>안양시 통합주차포털</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+
+<!-- 최상단 유틸바 -->
+<div class="top-util">
+    <div class="container">
+        <div class="util-left">
+            <a href="#"><i class="fas fa-home"></i> 안양도시공사</a>
+        </div>
+        <div class="util-right">
+            <a href="#">로그인</a>
+            <span class="divider">|</span>
+            <a href="#">회원가입</a>
+            <span class="divider">|</span>
+            <a href="#">마이페이지</a>
+        </div>
+    </div>
+</div>
+
+<!-- 헤더 -->
+<header class="header">
+    <div class="container">
+        <div class="logo-area">
+            <a href="index.html" class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-parking"></i>
+                </div>
+                <div class="logo-text">
+                    <span class="logo-sub">안양도시공사</span>
+                    <h1>안양시 통합주차포털</h1>
+                </div>
+            </a>
+        </div>
+        <nav class="gnb" id="gnb">
+            <ul class="gnb-list">
+                <li><a href="#">주차장 찾기</a></li>
+                <li>
+                    <a href="#">주차요금 정산</a>
+                    <ul class="gnb-sub">
+                        <li><a href="#">주차요금 사전결제</a></li>
+                        <li><a href="#">미납요금 조회/납부</a></li>
+                    </ul>
+                </li>
+                <li><a href="#">파킹패스</a></li>
+                <li><a href="#">월정기주차</a></li>
+                <li><a href="#">감면 등록</a></li>
+                <li><a href="#">견인차량 검색</a></li>
+                <li>
+                    <a href="#">정보마당</a>
+                    <ul class="gnb-sub">
+                        <li><a href="#">공지사항</a></li>
+                        <li><a href="#">주차요금 안내</a></li>
+                        <li><a href="#">감면대상 안내</a></li>
+                        <li><a href="#">자주 묻는 질문</a></li>
+                    </ul>
+                </li>
+            </ul>
+            <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="메뉴 열기">
+                <i class="fas fa-bars"></i>
+            </button>
+        </nav>
+    </div>
+</header>
+
+<!-- 메인 비주얼 슬라이더 -->
+<section class="main-visual">
+    <div class="slides-wrapper">
+        <div class="slide active" data-index="0">
+            <div class="slide-bg" style="background: linear-gradient(135deg, #0055a5 0%, #003b73 100%);"></div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="slide-text">
+                        <p class="slide-sub">안양시 통합주차포털</p>
+                        <h2>스마트한 주차생활,<br>통합주차포털에서 시작하세요</h2>
+                        <p class="slide-desc">실시간 주차현황 조회부터 요금 납부까지 한 곳에서</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="slide" data-index="1">
+            <div class="slide-bg" style="background: linear-gradient(135deg, #1a7a3a 0%, #0d5c26 100%);"></div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="slide-text">
+                        <p class="slide-sub">파킹패스 서비스</p>
+                        <h2>출차 시 멈추지 않고<br>자동결제! 파킹패스</h2>
+                        <p class="slide-desc">차량번호와 카드를 등록하면 자동으로 요금이 결제됩니다</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="slide" data-index="2">
+            <div class="slide-bg" style="background: linear-gradient(135deg, #c35400 0%, #8a3a00 100%);"></div>
+            <div class="slide-content">
+                <div class="container">
+                    <div class="slide-text">
+                        <p class="slide-sub">주차요금 사전결제</p>
+                        <h2>출차 전 미리 결제하고<br>빠르게 출차하세요</h2>
+                        <p class="slide-desc">웹, 모바일에서 간편하게 사전결제 가능</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-controls">
+        <div class="container">
+            <div class="controls-inner">
+                <button class="slide-arrow prev" aria-label="이전"><i class="fas fa-chevron-left"></i></button>
+                <div class="slide-indicators">
+                    <button class="indicator active" data-index="0">1</button>
+                    <span class="indicator-divider">/</span>
+                    <span class="indicator-total">3</span>
+                </div>
+                <button class="slide-pause-btn" id="slidePauseBtn" aria-label="일시정지">
+                    <i class="fas fa-pause"></i>
+                </button>
+                <button class="slide-arrow next" aria-label="다음"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 퀵메뉴 바로가기 -->
+<section class="quick-service">
+    <div class="container">
+        <div class="quick-grid">
+            <a href="#" class="quick-item">
+                <div class="quick-icon">
+                    <i class="fas fa-search-location"></i>
+                </div>
+                <span class="quick-label">주차장 찾기</span>
+            </a>
+            <a href="#" class="quick-item">
+                <div class="quick-icon">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <span class="quick-label">사전결제</span>
+            </a>
+            <a href="#" class="quick-item">
+                <div class="quick-icon">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                </div>
+                <span class="quick-label">미납요금<br>조회/납부</span>
+            </a>
+            <a href="#" class="quick-item">
+                <div class="quick-icon">
+                    <i class="fas fa-car-side"></i>
+                </div>
+                <span class="quick-label">파킹패스</span>
+            </a>
+            <a href="#" class="quick-item">
+                <div class="quick-icon">
+                    <i class="fas fa-calendar-check"></i>
+                </div>
+                <span class="quick-label">월정기주차</span>
+            </a>
+            <a href="#" class="quick-item">
+                <div class="quick-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <span class="quick-label">감면 등록</span>
+            </a>
+            <a href="#" class="quick-item">
+                <div class="quick-icon">
+                    <i class="fas fa-truck-pickup"></i>
+                </div>
+                <span class="quick-label">견인차량<br>검색</span>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- 차량번호 검색 영역 -->
+<section class="vehicle-search">
+    <div class="container">
+        <div class="search-panel">
+            <div class="search-tabs">
+                <button class="tab active" data-tab="unpaid">미납요금 조회</button>
+                <button class="tab" data-tab="tow">견인차량 조회</button>
+                <button class="tab" data-tab="parking">주차장 검색</button>
+            </div>
+            <div class="search-body">
+                <div class="tab-content active" id="tab-unpaid">
+                    <p class="search-desc">차량번호를 입력하여 미납 주차요금을 조회합니다.</p>
+                    <div class="search-input-group">
+                        <input type="text" placeholder="차량번호 입력 (예: 12가3456)" class="input-vehicle">
+                        <button class="btn-blue">조회하기</button>
+                    </div>
+                </div>
+                <div class="tab-content" id="tab-tow">
+                    <p class="search-desc">차량번호를 입력하여 견인 여부 및 보관 장소를 확인합니다.</p>
+                    <div class="search-input-group">
+                        <input type="text" placeholder="차량번호 입력 (예: 12가3456)" class="input-vehicle">
+                        <button class="btn-blue">조회하기</button>
+                    </div>
+                </div>
+                <div class="tab-content" id="tab-parking">
+                    <p class="search-desc">주차장명 또는 주소를 입력하여 주차장을 검색합니다.</p>
+                    <div class="search-input-group">
+                        <input type="text" placeholder="주차장명 또는 주소 입력" class="input-vehicle">
+                        <button class="btn-blue">검색하기</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 실시간 주차현황 -->
+<section class="realtime-parking">
+    <div class="container">
+        <div class="section-title">
+            <h2>실시간 주차현황</h2>
+            <span class="parking-total-info">안양시 공영주차장 총 <strong>68</strong>개소 / <strong>6,271</strong>면</span>
+        </div>
+
+        <!-- 지역 필터 탭 -->
+        <div class="area-tabs">
+            <button class="area-tab active" data-area="all">전체</button>
+            <button class="area-tab" data-area="manan">만안구</button>
+            <button class="area-tab" data-area="dongan">동안구</button>
+        </div>
+
+        <!-- 슬라이더 -->
+        <div class="parking-slider-wrap">
+            <button class="parking-arrow parking-prev" aria-label="이전"><i class="fas fa-chevron-left"></i></button>
+            <div class="parking-slider-viewport">
+                <div class="parking-slider-track" id="parkingGrid"></div>
+            </div>
+            <button class="parking-arrow parking-next" aria-label="다음"><i class="fas fa-chevron-right"></i></button>
+        </div>
+    </div>
+</section>
+
+<!-- 서비스 안내 배너 -->
+<section class="service-banner">
+    <div class="container">
+        <div class="banner-row">
+            <a href="#" class="banner-card">
+                <div class="banner-icon"><i class="fas fa-car-side"></i></div>
+                <div class="banner-text">
+                    <h4>파킹패스 안내</h4>
+                    <p>차량번호 인식으로 자동결제!<br>출차 시 정차 없이 통과</p>
+                </div>
+                <i class="fas fa-chevron-right banner-arrow"></i>
+            </a>
+            <a href="#" class="banner-card">
+                <div class="banner-icon"><i class="fas fa-credit-card"></i></div>
+                <div class="banner-text">
+                    <h4>사전결제 안내</h4>
+                    <p>출차 전 웹/모바일로 미리 결제<br>빠른 출차 가능</p>
+                </div>
+                <i class="fas fa-chevron-right banner-arrow"></i>
+            </a>
+            <a href="#" class="banner-card">
+                <div class="banner-icon"><i class="fas fa-percent"></i></div>
+                <div class="banner-text">
+                    <h4>감면대상 안내</h4>
+                    <p>장애인, 국가유공자, 친환경차 등<br>주차요금 감면 안내</p>
+                </div>
+                <i class="fas fa-chevron-right banner-arrow"></i>
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- 공지사항 & 주차요금 안내 -->
+<section class="info-section">
+    <div class="container">
+        <div class="info-grid">
+            <!-- 공지사항 -->
+            <div class="info-box">
+                <div class="section-title">
+                    <h2>공지사항</h2>
+                    <a href="#" class="link-more">더보기 <i class="fas fa-plus"></i></a>
+                </div>
+                <ul class="notice-list">
+                    <li>
+                        <a href="#">
+                            <span class="notice-badge new">NEW</span>
+                            <span class="notice-title">2026년 상반기 월정기주차 신규 접수 안내</span>
+                            <span class="notice-date">2026.04.01</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <span class="notice-title">파킹패스 서비스 이용 안내 및 등록 방법</span>
+                            <span class="notice-date">2026.03.28</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <span class="notice-title">안양역 공영주차장 야간 운영시간 변경 안내</span>
+                            <span class="notice-date">2026.03.25</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <span class="notice-title">친환경차(전기·수소차) 주차요금 감면 확대 시행</span>
+                            <span class="notice-date">2026.03.20</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="#">
+                            <span class="notice-title">주차요금 사전결제 시스템 점검 안내 (4/5)</span>
+                            <span class="notice-date">2026.03.15</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <!-- 주차요금 안내 -->
+            <div class="info-box">
+                <div class="section-title">
+                    <h2>주차요금 안내</h2>
+                    <a href="#" class="link-more">상세보기 <i class="fas fa-plus"></i></a>
+                </div>
+                <div class="fee-table-wrap">
+                    <table class="fee-table">
+                        <thead>
+                            <tr>
+                                <th>구분</th>
+                                <th>기본요금 (15분)</th>
+                                <th>추가요금 (10분)</th>
+                                <th>1일 최대</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="badge-type outdoor small">노외</span></td>
+                                <td>무료</td>
+                                <td>300원</td>
+                                <td>10,000원</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge-type street small">노상</span></td>
+                                <td>무료</td>
+                                <td>200원</td>
+                                <td>8,000원</td>
+                            </tr>
+                            <tr>
+                                <td><span class="badge-type mechanical small">기계식</span></td>
+                                <td>무료</td>
+                                <td>250원</td>
+                                <td>9,000원</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p class="fee-notice"><i class="fas fa-info-circle"></i> 최초 15분 무료, 이후 10분 단위 과금</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 주차장 지도 -->
+<section class="map-section">
+    <div class="container">
+        <div class="section-title">
+            <h2>주차장 지도</h2>
+        </div>
+        <div class="map-area">
+            <div class="map-sidebar">
+                <div class="map-filter">
+                    <h4>주차장 유형</h4>
+                    <label><input type="checkbox" checked> <span class="badge-type outdoor small">노외</span> 노외주차장</label>
+                    <label><input type="checkbox" checked> <span class="badge-type street small">노상</span> 노상주차장</label>
+                    <label><input type="checkbox" checked> <span class="badge-type mechanical small">기계식</span> 기계식주차장</label>
+                </div>
+                <div class="map-result-list">
+                    <div class="map-result-item">
+                        <h5>안양역 공영주차장</h5>
+                        <p>안양시 만안구 안양로 112</p>
+                        <span class="status-label available">여유</span>
+                    </div>
+                    <div class="map-result-item">
+                        <h5>범계역 공영주차장</h5>
+                        <p>안양시 동안구 시민대로 180</p>
+                        <span class="status-label normal">보통</span>
+                    </div>
+                    <div class="map-result-item">
+                        <h5>평촌 중앙공원 주차장</h5>
+                        <p>안양시 동안구 평촌대로 200</p>
+                        <span class="status-label crowded">혼잡</span>
+                    </div>
+                </div>
+            </div>
+            <div class="map-view">
+                <div class="map-placeholder">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <p>지도 영역</p>
+                    <span>카카오맵 / 네이버맵 API 연동 영역</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 하단 관련 사이트 배너 -->
+<section class="related-banner">
+    <div class="container">
+        <div class="related-list">
+            <a href="#" class="related-item">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40'%3E%3Crect fill='%23e8e8e8' width='120' height='40' rx='4'/%3E%3Ctext x='60' y='24' fill='%23999' font-size='11' text-anchor='middle'%3E안양시청%3C/text%3E%3C/svg%3E" alt="안양시청">
+            </a>
+            <a href="#" class="related-item">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40'%3E%3Crect fill='%23e8e8e8' width='120' height='40' rx='4'/%3E%3Ctext x='60' y='24' fill='%23999' font-size='11' text-anchor='middle'%3E안양도시공사%3C/text%3E%3C/svg%3E" alt="안양도시공사">
+            </a>
+            <a href="#" class="related-item">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40'%3E%3Crect fill='%23e8e8e8' width='120' height='40' rx='4'/%3E%3Ctext x='60' y='24' fill='%23999' font-size='11' text-anchor='middle'%3E경기도청%3C/text%3E%3C/svg%3E" alt="경기도청">
+            </a>
+            <a href="#" class="related-item">
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='40'%3E%3Crect fill='%23e8e8e8' width='120' height='40' rx='4'/%3E%3Ctext x='60' y='24' fill='%23999' font-size='11' text-anchor='middle'%3E국토교통부%3C/text%3E%3C/svg%3E" alt="국토교통부">
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- 푸터 -->
+<footer class="footer">
+    <div class="container">
+        <div class="footer-top">
+            <div class="footer-links">
+                <a href="#" class="privacy"><strong>개인정보처리방침</strong></a>
+                <a href="#">이용약관</a>
+                <a href="#">이메일무단수집거부</a>
+                <a href="#">저작권정책</a>
+                <a href="#">접근성 정책</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div class="footer-info">
+                <div class="footer-logo">
+                    <i class="fas fa-parking"></i>
+                    <div>
+                        <strong>안양도시공사</strong>
+                        <span>안양시 통합주차포털</span>
+                    </div>
+                </div>
+                <address>
+                    (14066) 경기도 안양시 동안구 시민대로 235 (관양동) 안양도시공사<br>
+                    대표전화 : 031-8045-7000 &nbsp;|&nbsp; 주차관련 문의 : 031-8045-7114 &nbsp;|&nbsp; 팩스 : 031-8045-7099
+                </address>
+                <p class="copyright">Copyright &copy; 2026 안양도시공사. All rights reserved.</p>
+            </div>
+            <div class="footer-family">
+                <select id="familySite">
+                    <option>유관기관 바로가기</option>
+                    <option>안양시청</option>
+                    <option>안양도시공사</option>
+                    <option>경기도 교통정보센터</option>
+                    <option>국토교통부</option>
+                    <option>한국교통안전공단</option>
+                </select>
+                <button class="btn-go" aria-label="바로가기">GO</button>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- 챗봇 -->
+<div class="chatbot-btn" id="chatbotBtn" aria-label="수목원 주차 예약">
+    <i class="fas fa-tree"></i>
+    <span class="chatbot-btn-label">주차예약</span>
+</div>
+<div class="chatbot-window" id="chatbotWindow">
+    <div class="chatbot-header">
+        <span><i class="fas fa-tree"></i> 안양수목원 주차 예약</span>
+        <div class="chatbot-header-btns">
+            <button class="chatbot-tts-toggle active" id="ttsToggle" aria-label="음성 안내" title="음성 안내 켜기/끄기"><i class="fas fa-volume-up"></i></button>
+            <button class="chatbot-close" id="chatbotClose" aria-label="닫기"><i class="fas fa-times"></i></button>
+        </div>
+    </div>
+    <div class="chatbot-body" id="chatbotBody">
+        <div class="chat-menu" id="mainMenu">
+            <button class="chat-menu-btn" data-action="congestion"><i class="fas fa-chart-bar"></i> 혼잡 현황</button>
+            <button class="chat-menu-btn" data-action="reserve"><i class="fas fa-calendar-check"></i> 주차 예약</button>
+            <button class="chat-menu-btn" data-action="cancel"><i class="fas fa-edit"></i> 취소/변경</button>
+            <button class="chat-menu-btn" data-action="faq"><i class="fas fa-info-circle"></i> 노쇼·운영 안내</button>
+        </div>
+        <div class="chat-msg bot">안녕하세요! 서울대 안양수목원 주차장 예약 챗봇입니다.<br>위 메뉴를 선택하거나 자유롭게 질문해 주세요.</div>
+    </div>
+    <div class="chatbot-input">
+        <input type="text" id="chatbotInput" placeholder="메시지를 입력하세요...">
+        <button id="chatbotSend" aria-label="전송"><i class="fas fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<script src="parking-data.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

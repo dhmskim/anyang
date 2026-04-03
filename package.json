@@ -1,0 +1,13 @@
+{
+  "name": "parking-chatbot-server",
+  "version": "1.0.0",
+  "description": "안양시 통합주차포털 AI 챗봇 서버",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5"
+  }
+}
