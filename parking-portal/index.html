@@ -6,6 +6,8 @@
     <title>안양시 통합주차포털</title>
     <link rel="stylesheet" href="style.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -365,38 +367,37 @@
     <div class="container">
         <div class="section-title">
             <h2>주차장 지도</h2>
+            <span class="map-subtitle">마커를 클릭하면 상세 정보를 확인할 수 있습니다</span>
         </div>
         <div class="map-area">
             <div class="map-sidebar">
+                <div class="map-search">
+                    <div class="map-search-input">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="mapSearchInput" placeholder="주차장명 검색...">
+                    </div>
+                </div>
                 <div class="map-filter">
                     <h4>주차장 유형</h4>
-                    <label><input type="checkbox" checked> <span class="badge-type outdoor small">노외</span> 노외주차장</label>
-                    <label><input type="checkbox" checked> <span class="badge-type street small">노상</span> 노상주차장</label>
-                    <label><input type="checkbox" checked> <span class="badge-type mechanical small">기계식</span> 기계식주차장</label>
-                </div>
-                <div class="map-result-list">
-                    <div class="map-result-item">
-                        <h5>안양역 공영주차장</h5>
-                        <p>안양시 만안구 안양로 112</p>
-                        <span class="status-label available">여유</span>
-                    </div>
-                    <div class="map-result-item">
-                        <h5>범계역 공영주차장</h5>
-                        <p>안양시 동안구 시민대로 180</p>
-                        <span class="status-label normal">보통</span>
-                    </div>
-                    <div class="map-result-item">
-                        <h5>평촌 중앙공원 주차장</h5>
-                        <p>안양시 동안구 평촌대로 200</p>
-                        <span class="status-label crowded">혼잡</span>
+                    <div class="map-filter-chips">
+                        <label class="filter-chip active" data-type="all"><input type="checkbox" checked hidden><span>전체</span></label>
+                        <label class="filter-chip active" data-type="outdoor"><input type="checkbox" checked hidden><i class="fas fa-parking"></i><span>노외</span></label>
+                        <label class="filter-chip active" data-type="street"><input type="checkbox" checked hidden><i class="fas fa-road"></i><span>노상</span></label>
+                        <label class="filter-chip active" data-type="underground"><input type="checkbox" checked hidden><i class="fas fa-arrow-down"></i><span>지하</span></label>
                     </div>
                 </div>
+                <div class="map-result-header">
+                    <span>주차장 목록</span>
+                    <span class="map-result-count" id="mapResultCount">0개</span>
+                </div>
+                <div class="map-result-list" id="mapResultList"></div>
             </div>
-            <div class="map-view">
-                <div class="map-placeholder">
-                    <i class="fas fa-map-marked-alt"></i>
-                    <p>지도 영역</p>
-                    <span>카카오맵 / 네이버맵 API 연동 영역</span>
+            <div class="map-view" id="parkingMap">
+                <button class="map-locate-btn" id="mapLocateBtn" title="내 위치"><i class="fas fa-crosshairs"></i></button>
+                <div class="map-legend">
+                    <div class="legend-item"><span class="legend-dot available"></span>여유</div>
+                    <div class="legend-item"><span class="legend-dot normal"></span>보통</div>
+                    <div class="legend-item"><span class="legend-dot crowded"></span>혼잡</div>
                 </div>
             </div>
         </div>
@@ -488,6 +489,7 @@
         <div class="chat-msg bot">안녕하세요! 서울대 안양수목원 주차장 예약 챗봇입니다.<br>위 메뉴를 선택하거나 자유롭게 질문해 주세요.</div>
     </div>
     <div class="chatbot-input">
+        <button class="counselor-btn" id="counselorBtn" aria-label="상담원 연결" title="상담원 연결"><i class="fas fa-headset"></i></button>
         <input type="text" id="chatbotInput" placeholder="메시지를 입력하세요...">
         <button id="chatbotSend" aria-label="전송"><i class="fas fa-paper-plane"></i></button>
     </div>

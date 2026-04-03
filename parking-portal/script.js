@@ -237,11 +237,146 @@ areaTabs.forEach(tab => {
         areaTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         currentFilter = tab.dataset.area;
-        parkingPage = 0;
+        parkingIndex = 0;
         layoutSlider();
         resetParkingAuto();
     });
 });
+
+// ===== Leaflet 지도 =====
+(function initMap() {
+    const mapEl = document.getElementById('parkingMap');
+    if (!mapEl || typeof L === 'undefined') return;
+
+    const map = L.map('parkingMap', {
+        zoomControl: false,
+        attributionControl: false
+    }).setView([37.3950, 126.9450], 13);
+
+    // 위성 타일 (Esri World Imagery)
+    const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19
+    });
+
+    // 위성 위에 도로/지명 라벨 오버레이
+    const labels = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
+        pane: 'overlayPane'
+    });
+
+    // 일반 지도 (CartoDB Voyager)
+    const streets = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd'
+    });
+
+    // 기본: 위성 + 라벨
+    satellite.addTo(map);
+    labels.addTo(map);
+
+    L.control.layers({
+        '위성 지도': L.layerGroup([satellite, labels]),
+        '일반 지도': streets
+    }, null, { position: 'topright', collapsed: false }).addTo(map);
+
+    L.control.zoom({ position: 'topright' }).addTo(map);
+    L.control.attribution({ position: 'bottomright', prefix: false })
+        .addAttribution('&copy; Esri &copy; <a href="https://carto.com/">CARTO</a>')
+        .addTo(map);
+
+    const allMarkers = [];
+    const resultList = document.getElementById('mapResultList');
+    const resultCount = document.getElementById('mapResultCount');
+    const activeFilters = new Set(['outdoor', 'street', 'underground', 'mechanical']);
+
+    // 사이드바 리스트 렌더
+    function renderList() {
+        const keyword = (document.getElementById('mapSearchInput').value || '').trim().toLowerCase();
+        resultList.innerHTML = '';
+        let count = 0;
+
+        PARKING_DATA.forEach((p, idx) => {
+            if (!activeFilters.has(p.type)) return;
+            if (keyword && !p.name.toLowerCase().includes(keyword) && !p.addr.toLowerCase().includes(keyword)) return;
+
+            const pct = Math.round(p.used / p.total * 100);
+            const status = getStatus(p.used, p.total);
+            const remaining = p.total - p.used;
+            const statusLabel = STATUS_LABELS[status];
+
+            const div = document.createElement('div');
+            div.className = 'map-result-item';
+            div.dataset.idx = idx;
+            div.innerHTML = `
+                <div class="map-result-icon ${status}"><i class="fas fa-parking"></i></div>
+                <div class="map-result-info">
+                    <h5>${p.name}</h5>
+                    <p>안양시 ${p.addr}</p>
+                    <div class="map-result-meta">
+                        <div class="map-result-bar"><div class="map-result-bar-fill ${status}" style="width:${pct}%"></div></div>
+                        <span class="map-result-slots ${status}">${statusLabel} ${remaining}면</span>
+                    </div>
+                </div>`;
+
+            resultList.appendChild(div);
+            count++;
+        });
+
+        resultCount.textContent = count + '개';
+    }
+
+    // 필터 칩 이벤트
+    document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+            const type = chip.dataset.type;
+
+            if (type === 'all') {
+                const allActive = activeFilters.size === 4;
+                document.querySelectorAll('.filter-chip').forEach(c => {
+                    if (allActive) {
+                        c.classList.remove('active');
+                        activeFilters.clear();
+                    } else {
+                        c.classList.add('active');
+                        ['outdoor', 'street', 'underground', 'mechanical'].forEach(t => activeFilters.add(t));
+                    }
+                });
+            } else {
+                chip.classList.toggle('active');
+                if (activeFilters.has(type)) activeFilters.delete(type);
+                else activeFilters.add(type);
+
+                const allChip = document.querySelector('.filter-chip[data-type="all"]');
+                if (activeFilters.size === 4) allChip.classList.add('active');
+                else allChip.classList.remove('active');
+            }
+
+            renderList();
+        });
+    });
+
+    // 검색
+    document.getElementById('mapSearchInput').addEventListener('input', () => renderList());
+
+    // 내 위치 버튼
+    document.getElementById('mapLocateBtn').addEventListener('click', () => {
+        if (!navigator.geolocation) return;
+        navigator.geolocation.getCurrentPosition(pos => {
+            map.setView([pos.coords.latitude, pos.coords.longitude], 15, { animate: true });
+            L.circleMarker([pos.coords.latitude, pos.coords.longitude], {
+                radius: 7,
+                color: '#fff',
+                fillColor: '#0055a5',
+                fillOpacity: 1,
+                weight: 2.5
+            }).addTo(map);
+        });
+    });
+
+    // 초기 렌더
+    renderList();
+})();
 
 // ===== 유관기관 바로가기 =====
 const familyGoBtn = document.querySelector('.btn-go');
@@ -265,6 +400,7 @@ const chatbotClose = document.getElementById('chatbotClose');
 const chatbotBody = document.getElementById('chatbotBody');
 const chatbotInput = document.getElementById('chatbotInput');
 const chatbotSend = document.getElementById('chatbotSend');
+const counselorBtn = document.getElementById('counselorBtn');
 const sessionId = 'session_' + Date.now();
 const ttsToggle = document.getElementById('ttsToggle');
 let isSending = false;
@@ -703,3 +839,19 @@ function handleSend() {
 
 chatbotSend.addEventListener('click', handleSend);
 chatbotInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSend(); });
+
+// --- 상담원 연결 ---
+counselorBtn.addEventListener('click', async () => {
+    if (!confirm('상담원 연결을 요청하시겠습니까?')) return;
+    try {
+        const res = await fetch('/api/counselor', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId })
+        });
+        const data = await res.json();
+        appendMsg('bot', data.message || '상담원 연결이 요청되었습니다. 관리사무소(031-470-0242)에서 곧 연락드리겠습니다.');
+    } catch {
+        appendMsg('bot', '상담원 연결 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+    }
+});
