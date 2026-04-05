@@ -17,10 +17,10 @@
         <div class="util-left">
             <a href="#"><i class="fas fa-home"></i> 안양도시공사</a>
         </div>
-        <div class="util-right">
-            <a href="#">로그인</a>
+        <div class="util-right" id="utilRight">
+            <a href="#" id="loginBtn">로그인</a>
             <span class="divider">|</span>
-            <a href="#">회원가입</a>
+            <a href="#" id="signupBtn">회원가입</a>
             <span class="divider">|</span>
             <a href="#">마이페이지</a>
         </div>
@@ -193,23 +193,26 @@
                 <div class="tab-content active" id="tab-unpaid">
                     <p class="search-desc">차량번호를 입력하여 미납 주차요금을 조회합니다.</p>
                     <div class="search-input-group">
-                        <input type="text" placeholder="차량번호 입력 (예: 12가3456)" class="input-vehicle">
-                        <button class="btn-blue">조회하기</button>
+                        <input type="text" placeholder="차량번호 입력 (예: 12가3456)" class="input-vehicle" id="unpaidInput">
+                        <button class="btn-blue" id="unpaidBtn">조회하기</button>
                     </div>
+                    <div class="search-result" id="unpaidResult"></div>
                 </div>
                 <div class="tab-content" id="tab-tow">
                     <p class="search-desc">차량번호를 입력하여 견인 여부 및 보관 장소를 확인합니다.</p>
                     <div class="search-input-group">
-                        <input type="text" placeholder="차량번호 입력 (예: 12가3456)" class="input-vehicle">
-                        <button class="btn-blue">조회하기</button>
+                        <input type="text" placeholder="차량번호 입력 (예: 12가3456)" class="input-vehicle" id="towInput">
+                        <button class="btn-blue" id="towBtn">조회하기</button>
                     </div>
+                    <div class="search-result" id="towResult"></div>
                 </div>
                 <div class="tab-content" id="tab-parking">
                     <p class="search-desc">주차장명 또는 주소를 입력하여 주차장을 검색합니다.</p>
                     <div class="search-input-group">
-                        <input type="text" placeholder="주차장명 또는 주소 입력" class="input-vehicle">
-                        <button class="btn-blue">검색하기</button>
+                        <input type="text" placeholder="주차장명 또는 주소 입력" class="input-vehicle" id="parkingSearchInput">
+                        <button class="btn-blue" id="parkingSearchBtn">검색하기</button>
                     </div>
+                    <div class="search-result" id="parkingSearchResult"></div>
                 </div>
             </div>
         </div>
@@ -492,6 +495,87 @@
         <button class="counselor-btn" id="counselorBtn" aria-label="상담원 연결" title="상담원 연결"><i class="fas fa-headset"></i></button>
         <input type="text" id="chatbotInput" placeholder="메시지를 입력하세요...">
         <button id="chatbotSend" aria-label="전송"><i class="fas fa-paper-plane"></i></button>
+    </div>
+</div>
+
+<!-- 로그인 모달 -->
+<div class="login-overlay" id="loginOverlay">
+    <div class="login-modal">
+        <button class="login-close" id="loginClose"><i class="fas fa-times"></i></button>
+        <div class="login-header">
+            <i class="fas fa-parking"></i>
+            <h3>안양시 통합주차포털 로그인</h3>
+        </div>
+        <div class="login-body">
+            <div class="login-field">
+                <label>아이디</label>
+                <input type="text" id="loginId" placeholder="아이디 입력">
+            </div>
+            <div class="login-field">
+                <label>비밀번호</label>
+                <input type="password" id="loginPw" placeholder="비밀번호 입력">
+            </div>
+            <button class="login-submit" id="loginSubmit">로그인</button>
+            <div class="login-divider"><span>테스트 계정</span></div>
+            <div class="login-test">
+                <select id="testAccount">
+                    <option value="">-- 테스트 계정 선택 --</option>
+                    <option value="AD|roqkfwk00">AD / roqkfwk00 (관리자)</option>
+                </select>
+                <button class="login-test-btn" id="testLoginBtn">바로 로그인</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 회원가입 모달 -->
+<div class="login-overlay" id="signupOverlay">
+    <div class="login-modal signup-modal">
+        <button class="login-close" id="signupClose"><i class="fas fa-times"></i></button>
+        <div class="login-header">
+            <i class="fas fa-user-plus"></i>
+            <h3>회원가입</h3>
+        </div>
+        <div class="login-body">
+            <div class="login-field">
+                <label>아이디 <span class="required">*</span></label>
+                <div class="field-with-btn">
+                    <input type="text" id="signupId" placeholder="영문, 숫자 4~20자">
+                    <button class="field-btn" id="idCheckBtn">중복확인</button>
+                </div>
+                <span class="field-msg" id="idMsg"></span>
+            </div>
+            <div class="login-field">
+                <label>비밀번호 <span class="required">*</span></label>
+                <input type="password" id="signupPw" placeholder="영문, 숫자 포함 8자 이상">
+                <span class="field-msg" id="pwMsg"></span>
+            </div>
+            <div class="login-field">
+                <label>비밀번호 확인 <span class="required">*</span></label>
+                <input type="password" id="signupPwConfirm" placeholder="비밀번호 재입력">
+                <span class="field-msg" id="pwConfirmMsg"></span>
+            </div>
+            <div class="login-field">
+                <label>이름 <span class="required">*</span></label>
+                <input type="text" id="signupName" placeholder="실명 입력">
+            </div>
+            <div class="login-field">
+                <label>휴대폰 <span class="required">*</span></label>
+                <input type="tel" id="signupPhone" placeholder="010-0000-0000">
+            </div>
+            <div class="login-field">
+                <label>차량번호</label>
+                <input type="text" id="signupCar" placeholder="12가3456 (선택)">
+            </div>
+            <div class="signup-agree">
+                <label><input type="checkbox" id="agreeAll"> <strong>전체 동의</strong></label>
+                <label><input type="checkbox" class="agree-item"> [필수] 이용약관 동의</label>
+                <label><input type="checkbox" class="agree-item"> [필수] 개인정보 수집·이용 동의</label>
+                <label><input type="checkbox" class="agree-item"> [선택] 마케팅 정보 수신 동의</label>
+            </div>
+            <button class="login-submit signup-submit" id="signupSubmit">가입하기</button>
+            <p class="signup-login-link">이미 계정이 있으신가요? <a href="#" id="goLoginBtn">로그인</a></p>
+        </div>
     </div>
 </div>
 

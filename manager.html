@@ -20,16 +20,124 @@
             </div>
         </div>
         <ul class="sidebar-menu">
-            <li class="active" data-page="conversations"><i class="fas fa-comments"></i> 대화 내역</li>
+            <li class="active" data-page="users"><i class="fas fa-users"></i> 유저 관리</li>
+            <li data-page="conversations"><i class="fas fa-comments"></i> 대화 내역</li>
             <li data-page="counselor"><i class="fas fa-headset"></i> 상담원 요청 <span class="badge" id="counselorBadge"></span></li>
+            <li data-page="docs"><i class="fas fa-book"></i> API / 구현 문서</li>
             <li data-page="settings"><i class="fas fa-cog"></i> 기타 관리</li>
         </ul>
+        <div class="sidebar-bottom">
+            <button class="logout-sidebar-btn" id="adminLogout"><i class="fas fa-sign-out-alt"></i> 로그아웃</button>
+        </div>
     </nav>
 
     <!-- 메인 -->
     <main class="main-content">
+        <!-- 페이지 0: 유저 관리 -->
+        <section class="page active" id="page-users">
+            <div class="page-header">
+                <h2><i class="fas fa-users"></i> 유저 관리</h2>
+                <div class="page-header-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="userSearch" placeholder="이름, 아이디, 차량번호 검색...">
+                    </div>
+                    <button class="add-btn" id="addUserBtn"><i class="fas fa-plus"></i> 유저 추가</button>
+                </div>
+            </div>
+
+            <div class="user-stats">
+                <div class="stat-card">
+                    <div class="stat-icon total"><i class="fas fa-users"></i></div>
+                    <div class="stat-info"><span class="stat-num" id="statTotal">0</span><span class="stat-label">전체 회원</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon active"><i class="fas fa-user-check"></i></div>
+                    <div class="stat-info"><span class="stat-num" id="statActive">0</span><span class="stat-label">활성</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon inactive"><i class="fas fa-user-slash"></i></div>
+                    <div class="stat-info"><span class="stat-num" id="statInactive">0</span><span class="stat-label">비활성</span></div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon today"><i class="fas fa-user-clock"></i></div>
+                    <div class="stat-info"><span class="stat-num" id="statToday">0</span><span class="stat-label">오늘 가입</span></div>
+                </div>
+            </div>
+
+            <div class="user-table-wrap">
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="checkAll"></th>
+                            <th>아이디</th>
+                            <th>이름</th>
+                            <th>휴대폰</th>
+                            <th>차량번호</th>
+                            <th>역할</th>
+                            <th>상태</th>
+                            <th>가입일</th>
+                            <th>관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 유저 추가/수정 모달 -->
+        <div class="modal-overlay" id="userModal">
+            <div class="modal-box">
+                <div class="modal-header">
+                    <h3 id="modalTitle">유저 추가</h3>
+                    <button class="modal-close" id="modalClose"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editIdx" value="-1">
+                    <div class="modal-field">
+                        <label>아이디</label>
+                        <input type="text" id="modalId" placeholder="영문, 숫자 4~20자">
+                    </div>
+                    <div class="modal-field">
+                        <label>비밀번호</label>
+                        <input type="password" id="modalPw" placeholder="신규: 필수 / 수정: 빈칸이면 유지">
+                    </div>
+                    <div class="modal-field">
+                        <label>이름</label>
+                        <input type="text" id="modalName" placeholder="실명 입력">
+                    </div>
+                    <div class="modal-field">
+                        <label>휴대폰</label>
+                        <input type="tel" id="modalPhone" placeholder="010-0000-0000">
+                    </div>
+                    <div class="modal-field">
+                        <label>차량번호</label>
+                        <input type="text" id="modalCar" placeholder="12가3456 (선택)">
+                    </div>
+                    <div class="modal-field">
+                        <label>역할</label>
+                        <select id="modalRole">
+                            <option value="user">일반 사용자</option>
+                            <option value="admin">관리자</option>
+                        </select>
+                    </div>
+                    <div class="modal-field">
+                        <label>상태</label>
+                        <select id="modalStatus">
+                            <option value="active">활성</option>
+                            <option value="inactive">비활성</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="modal-cancel" id="modalCancel">취소</button>
+                    <button class="modal-save" id="modalSave">저장</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 페이지 1: 대화 내역 -->
-        <section class="page active" id="page-conversations">
+        <section class="page" id="page-conversations">
             <div class="page-header">
                 <h2><i class="fas fa-comments"></i> 챗봇 대화 내역</h2>
                 <button class="refresh-btn" onclick="loadConversations()"><i class="fas fa-sync-alt"></i> 새로고침</button>
@@ -60,7 +168,21 @@
             </div>
         </section>
 
-        <!-- 페이지 3: 기타 관리 -->
+        <!-- 페이지 3: API / 구현 문서 -->
+        <section class="page" id="page-docs">
+            <div class="page-header">
+                <h2><i class="fas fa-book"></i> API / 구현 문서</h2>
+            </div>
+            <div class="docs-grid" id="docsGrid">
+                <!-- JS에서 동적 렌더 -->
+            </div>
+            <div class="docs-viewer" id="docsViewer" style="display:none">
+                <button class="docs-back" id="docsBack"><i class="fas fa-arrow-left"></i> 목록으로</button>
+                <div class="docs-content" id="docsContent"></div>
+            </div>
+        </section>
+
+        <!-- 페이지 4: 기타 관리 -->
         <section class="page" id="page-settings">
             <div class="page-header">
                 <h2><i class="fas fa-cog"></i> 기타 관리</h2>
@@ -73,10 +195,6 @@
                 <div class="setting-card">
                     <h3><i class="fas fa-database"></i> 데이터 저장 현황</h3>
                     <p>대화 내역: data/conversations.json<br>상담 요청: data/counselor_requests.json</p>
-                </div>
-                <div class="setting-card">
-                    <h3><i class="fas fa-project-diagram"></i> 추후 확장 예정</h3>
-                    <p>예약 통계 대시보드, 사용자 관리, 주차장 설정 등</p>
                 </div>
             </div>
         </section>

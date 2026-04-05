@@ -202,6 +202,64 @@ app.post('/api/admin/counselor-requests/:sessionId/resolve', (req, res) => {
     res.json({ success: true });
 });
 
+// ===== API: Edge TTS =====
+const { MsEdgeTTS, OUTPUT_FORMAT } = require('msedge-tts');
+
+// 차량번호 한글 읽기 + SSML 느리게
+const NUM_KR_TTS = ['영','일','이','삼','사','오','육','칠','팔','구'];
+
+const DAY_FULL_TTS = {'월':'월요일','화':'화요일','수':'수요일','목':'목요일','금':'금요일','토':'토요일','일':'일요일'};
+
+function ttsClean(text) {
+    let t = text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+
+    // 예) ... 읽지 않기
+    t = t.replace(/예\s*[)）:]\s*\S+/g, '');
+
+    // 요일 축약: (월) → 월요일
+    t = t.replace(/\(([월화수목금토일])\)/g, (_, d) => DAY_FULL_TTS[d] || d);
+
+    // 차량번호: 12가3456 → 일. 이. 가. 삼. 사. 오. 육.
+    t = t.replace(/(\d{2,3})([가-힣])(\d{4})/g, (_, a, b, c) => {
+        return a.split('').map(n => NUM_KR_TTS[n]).join('. ') + '. ' + b + '. ' + c.split('').map(n => NUM_KR_TTS[n]).join('. ');
+    });
+
+    // 확인번호: AY12345678
+    t = t.replace(/([A-Z]{2})(\d{6,10})/g, (_, prefix, nums) => {
+        return prefix.split('').join('. ') + '. ' + nums.split('').map(n => NUM_KR_TTS[n]).join('. ');
+    });
+
+    // 전화번호: 031-470-0242
+    t = t.replace(/(\d{2,4})-(\d{3,4})-(\d{4})/g, (_, a, b, c) => {
+        return a.split('').map(n => NUM_KR_TTS[n]).join('. ') + ', ' + b.split('').map(n => NUM_KR_TTS[n]).join('. ') + ', ' + c.split('').map(n => NUM_KR_TTS[n]).join('. ');
+    });
+
+    return t;
+}
+
+app.post('/api/tts', async (req, res) => {
+    const { text } = req.body;
+    if (!text || !text.trim()) return res.status(400).end();
+
+    try {
+        const tts = new MsEdgeTTS();
+        await tts.setMetadata('ko-KR-SunHiNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3);
+
+        const cleanText = ttsClean(text);
+        const { audioStream } = tts.toStream(cleanText);
+
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Cache-Control', 'no-cache');
+
+        audioStream.on('data', (chunk) => res.write(chunk));
+        audioStream.on('end', () => res.end());
+        audioStream.on('error', () => res.status(500).end());
+    } catch (err) {
+        console.error('[TTS]', err.message);
+        res.status(500).end();
+    }
+});
+
 // ===== API: AI 채팅 (스트리밍) =====
 app.post('/api/chat', async (req, res) => {
     const { message, sessionId = 'default' } = req.body;

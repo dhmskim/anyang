@@ -78,16 +78,50 @@ mobileMenuBtn.addEventListener('click', () => {
     }
 });
 
-// ===== 조회 버튼 데모 =====
-document.querySelectorAll('.btn-blue').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const input = btn.previousElementSibling;
-        if (!input.value.trim()) {
-            alert('검색어를 입력해주세요.');
-            return;
-        }
-        alert(`"${input.value}" 조회 결과를 표시합니다. (데모)`);
-    });
+// ===== 조회 기능 =====
+// 미납요금 조회
+document.getElementById('unpaidBtn').addEventListener('click', () => {
+    const val = document.getElementById('unpaidInput').value.trim();
+    const result = document.getElementById('unpaidResult');
+    if (!val) { result.innerHTML = '<p class="result-warn"><i class="fas fa-exclamation-circle"></i> 차량번호를 입력해주세요.</p>'; return; }
+    result.innerHTML = `<div class="result-card">
+        <div class="result-icon ok"><i class="fas fa-check-circle"></i></div>
+        <div class="result-text"><strong>${val}</strong> 차량의 미납요금이 없습니다.</div>
+    </div>`;
+});
+
+// 견인차량 조회
+document.getElementById('towBtn').addEventListener('click', () => {
+    const val = document.getElementById('towInput').value.trim();
+    const result = document.getElementById('towResult');
+    if (!val) { result.innerHTML = '<p class="result-warn"><i class="fas fa-exclamation-circle"></i> 차량번호를 입력해주세요.</p>'; return; }
+    result.innerHTML = `<div class="result-card">
+        <div class="result-icon ok"><i class="fas fa-check-circle"></i></div>
+        <div class="result-text"><strong>${val}</strong> 차량은 견인 내역이 없습니다.</div>
+    </div>`;
+});
+
+// 주차장 검색
+document.getElementById('parkingSearchBtn').addEventListener('click', () => {
+    const val = document.getElementById('parkingSearchInput').value.trim().toLowerCase();
+    const result = document.getElementById('parkingSearchResult');
+    if (!val) { result.innerHTML = '<p class="result-warn"><i class="fas fa-exclamation-circle"></i> 검색어를 입력해주세요.</p>'; return; }
+    const found = PARKING_DATA.filter(p => p.name.toLowerCase().includes(val) || p.addr.toLowerCase().includes(val));
+    if (found.length === 0) {
+        result.innerHTML = '<p class="result-warn"><i class="fas fa-info-circle"></i> 검색 결과가 없습니다.</p>';
+        return;
+    }
+    result.innerHTML = found.map(p => {
+        const pct = Math.round(p.used / p.total * 100);
+        const status = getStatus(p.used, p.total);
+        const statusLabel = STATUS_LABELS[status];
+        const remaining = p.total - p.used;
+        return `<div class="result-parking">
+            <span class="result-parking-name">${p.name}</span>
+            <span class="result-parking-addr">안양시 ${p.addr}</span>
+            <span class="result-parking-status ${status}">${statusLabel} ${remaining}/${p.total}면</span>
+        </div>`;
+    }).join('');
 });
 
 // ===== 주차장 카드 동적 생성 =====
@@ -378,18 +412,241 @@ areaTabs.forEach(tab => {
     renderList();
 })();
 
+// ===== 로그인 =====
+const loginOverlay = document.getElementById('loginOverlay');
+const loginBtn = document.getElementById('loginBtn');
+const loginClose = document.getElementById('loginClose');
+const loginSubmit = document.getElementById('loginSubmit');
+const testLoginBtn = document.getElementById('testLoginBtn');
+const testAccount = document.getElementById('testAccount');
+const loginIdInput = document.getElementById('loginId');
+const loginPwInput = document.getElementById('loginPw');
+const utilRight = document.getElementById('utilRight');
+
+loginBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    loginOverlay.classList.add('open');
+    loginIdInput.focus();
+});
+
+loginClose.addEventListener('click', () => loginOverlay.classList.remove('open'));
+loginOverlay.addEventListener('click', (e) => {
+    if (e.target === loginOverlay) loginOverlay.classList.remove('open');
+});
+
+// 로그인 상태 추적
+let currentUser = null;
+
+function doLogin(id, displayName) {
+    loginOverlay.classList.remove('open');
+    currentUser = { id, name: displayName || id };
+    // registeredUsers에서 추가 정보 가져오기
+    const regUser = typeof registeredUsers !== 'undefined' && registeredUsers.find(u => u.id === id);
+    if (regUser) {
+        currentUser.phone = regUser.phone;
+        currentUser.car = regUser.car;
+        currentUser.name = regUser.name || displayName || id;
+    }
+    utilRight.innerHTML = `
+        <span class="util-user">
+            <i class="fas fa-user-circle"></i>
+            <strong>${displayName || id}</strong>님
+            <button class="logout-btn" id="logoutBtn">로그아웃</button>
+        </span>
+        <span class="divider">|</span>
+        <a href="#">마이페이지</a>`;
+    document.getElementById('logoutBtn').addEventListener('click', doLogout);
+}
+
+function doLogout() {
+    currentUser = null;
+    utilRight.innerHTML = `
+        <a href="#" id="loginBtn">로그인</a>
+        <span class="divider">|</span>
+        <a href="#">회원가입</a>
+        <span class="divider">|</span>
+        <a href="#">마이페이지</a>`;
+    document.getElementById('loginBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        loginOverlay.classList.add('open');
+        loginIdInput.focus();
+    });
+}
+
+loginPwInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') loginSubmit.click();
+});
+
+testLoginBtn.addEventListener('click', () => {
+    const val = testAccount.value;
+    if (!val) { alert('테스트 계정을 선택하세요.'); return; }
+    const [id, pw] = val.split('|');
+    loginIdInput.value = id;
+    loginPwInput.value = pw;
+    doLogin(id, 'AD(관리자)');
+});
+
+// ===== 회원가입 =====
+const signupOverlay = document.getElementById('signupOverlay');
+const signupCloseBtn = document.getElementById('signupClose');
+const signupSubmitBtn = document.getElementById('signupSubmit');
+const idCheckBtn = document.getElementById('idCheckBtn');
+const agreeAll = document.getElementById('agreeAll');
+const agreeItems = document.querySelectorAll('.agree-item');
+
+// 가입된 계정 저장 (테스트용 메모리)
+const registeredUsers = [{ id: 'AD', pw: 'roqkfwk00', name: '관리자', phone: '010-0000-0000', car: '' }];
+let idChecked = false;
+
+document.getElementById('signupBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    signupOverlay.classList.add('open');
+});
+
+signupCloseBtn.addEventListener('click', () => signupOverlay.classList.remove('open'));
+signupOverlay.addEventListener('click', (e) => {
+    if (e.target === signupOverlay) signupOverlay.classList.remove('open');
+});
+
+// 로그인 ↔ 회원가입 전환
+document.getElementById('goLoginBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    signupOverlay.classList.remove('open');
+    loginOverlay.classList.add('open');
+    loginIdInput.focus();
+});
+
+// 아이디 중복확인
+idCheckBtn.addEventListener('click', () => {
+    const id = document.getElementById('signupId').value.trim();
+    const msg = document.getElementById('idMsg');
+    if (!/^[a-zA-Z0-9]{4,20}$/.test(id)) {
+        msg.textContent = '영문, 숫자 4~20자로 입력해주세요.';
+        msg.className = 'field-msg err';
+        idChecked = false;
+        return;
+    }
+    if (registeredUsers.find(u => u.id.toLowerCase() === id.toLowerCase())) {
+        msg.textContent = '이미 사용 중인 아이디입니다.';
+        msg.className = 'field-msg err';
+        idChecked = false;
+    } else {
+        msg.textContent = '사용 가능한 아이디입니다.';
+        msg.className = 'field-msg ok';
+        idChecked = true;
+    }
+});
+
+document.getElementById('signupId').addEventListener('input', () => { idChecked = false; document.getElementById('idMsg').textContent = ''; });
+
+// 비밀번호 실시간 검증
+document.getElementById('signupPw').addEventListener('input', () => {
+    const pw = document.getElementById('signupPw').value;
+    const msg = document.getElementById('pwMsg');
+    if (pw.length === 0) { msg.textContent = ''; return; }
+    if (pw.length < 8 || !/[a-zA-Z]/.test(pw) || !/[0-9]/.test(pw)) {
+        msg.textContent = '영문, 숫자 포함 8자 이상 입력해주세요.';
+        msg.className = 'field-msg err';
+    } else {
+        msg.textContent = '사용 가능한 비밀번호입니다.';
+        msg.className = 'field-msg ok';
+    }
+});
+
+document.getElementById('signupPwConfirm').addEventListener('input', () => {
+    const pw = document.getElementById('signupPw').value;
+    const pwc = document.getElementById('signupPwConfirm').value;
+    const msg = document.getElementById('pwConfirmMsg');
+    if (pwc.length === 0) { msg.textContent = ''; return; }
+    if (pw !== pwc) {
+        msg.textContent = '비밀번호가 일치하지 않습니다.';
+        msg.className = 'field-msg err';
+    } else {
+        msg.textContent = '비밀번호가 일치합니다.';
+        msg.className = 'field-msg ok';
+    }
+});
+
+// 전체 동의
+agreeAll.addEventListener('change', () => {
+    agreeItems.forEach(item => item.checked = agreeAll.checked);
+});
+
+agreeItems.forEach(item => {
+    item.addEventListener('change', () => {
+        agreeAll.checked = [...agreeItems].every(i => i.checked);
+    });
+});
+
+// 가입 제출
+signupSubmitBtn.addEventListener('click', () => {
+    const id = document.getElementById('signupId').value.trim();
+    const pw = document.getElementById('signupPw').value;
+    const pwc = document.getElementById('signupPwConfirm').value;
+    const name = document.getElementById('signupName').value.trim();
+    const phone = document.getElementById('signupPhone').value.trim();
+    const car = document.getElementById('signupCar').value.trim();
+    const requiredAgrees = [...agreeItems].slice(0, 2);
+
+    if (!id) { alert('아이디를 입력해주세요.'); return; }
+    if (!idChecked) { alert('아이디 중복확인을 해주세요.'); return; }
+    if (pw.length < 8 || !/[a-zA-Z]/.test(pw) || !/[0-9]/.test(pw)) { alert('비밀번호를 올바르게 입력해주세요.'); return; }
+    if (pw !== pwc) { alert('비밀번호가 일치하지 않습니다.'); return; }
+    if (!name) { alert('이름을 입력해주세요.'); return; }
+    if (!phone) { alert('휴대폰 번호를 입력해주세요.'); return; }
+    if (!requiredAgrees.every(a => a.checked)) { alert('필수 약관에 동의해주세요.'); return; }
+
+    registeredUsers.push({ id, pw, name, phone, car });
+
+    // 테스트 계정 콤보에 추가
+    const opt = document.createElement('option');
+    opt.value = id + '|' + pw;
+    opt.textContent = id + ' / ' + pw + ' (' + name + ')';
+    testAccount.appendChild(opt);
+
+    alert('회원가입이 완료되었습니다!\n아이디: ' + id);
+    signupOverlay.classList.remove('open');
+
+    // 로그인 모달로 이동
+    loginIdInput.value = id;
+    loginPwInput.value = '';
+    loginOverlay.classList.add('open');
+    loginPwInput.focus();
+});
+
+// 로그인 시 등록된 계정도 확인하도록 수정
+loginSubmit.removeEventListener('click', loginSubmit._handler);
+loginSubmit._handler = () => {
+    const id = loginIdInput.value.trim();
+    const pw = loginPwInput.value.trim();
+    if (!id || !pw) { alert('아이디와 비밀번호를 입력하세요.'); return; }
+    const user = registeredUsers.find(u => u.id === id && u.pw === pw);
+    if (user) {
+        doLogin(id, user.name === '관리자' ? 'AD(관리자)' : user.name);
+    } else {
+        alert('아이디 또는 비밀번호가 올바르지 않습니다.');
+    }
+};
+loginSubmit.addEventListener('click', loginSubmit._handler);
+
 // ===== 유관기관 바로가기 =====
 const familyGoBtn = document.querySelector('.btn-go');
 const familySelect = document.getElementById('familySite');
 
+const FAMILY_URLS = {
+    '안양시청': 'https://www.anyang.go.kr',
+    '안양도시공사': 'https://www.auc.or.kr',
+    '경기도 교통정보센터': 'https://gits.gg.go.kr',
+    '국토교통부': 'https://www.molit.go.kr',
+    '한국교통안전공단': 'https://www.kotsa.or.kr'
+};
+
 if (familyGoBtn && familySelect) {
     familyGoBtn.addEventListener('click', () => {
         const selected = familySelect.value;
-        if (selected === '유관기관 바로가기') {
-            alert('사이트를 선택해주세요.');
-        } else {
-            alert(`${selected} 사이트로 이동합니다. (데모)`);
-        }
+        if (selected === '유관기관 바로가기') return;
+        const url = FAMILY_URLS[selected];
+        if (url) window.open(url, '_blank');
     });
 }
 
@@ -409,30 +666,41 @@ let ttsEnabled = true;
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
-// --- TTS ---
-function speak(text) {
-    if (!ttsEnabled || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    // HTML 태그, 아이콘 텍스트 제거
-    const clean = text.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+// --- TTS (Edge TTS) ---
+let ttsAudio = null;
+
+// TTS 변환은 서버에서 SSML로 처리
+
+async function speak(text) {
+    if (!ttsEnabled) return;
+    stopSpeak();
+    const clean = text.replace(/\s+/g, ' ').trim();
     if (!clean) return;
-    const utter = new SpeechSynthesisUtterance(clean);
-    utter.lang = 'ko-KR';
-    utter.rate = 1.1;
-    utter.pitch = 1.0;
-    // 한국어 음성 찾기
-    const voices = speechSynthesis.getVoices();
-    const koVoice = voices.find(v => v.lang.startsWith('ko'));
-    if (koVoice) utter.voice = koVoice;
-    speechSynthesis.speak(utter);
+
+    try {
+        const res = await fetch('/api/tts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: clean })
+        });
+        if (!res.ok) return;
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        ttsAudio = new Audio(url);
+        ttsAudio.playbackRate = 1.0;
+        ttsAudio.play();
+        ttsAudio.onended = () => { URL.revokeObjectURL(url); ttsAudio = null; };
+    } catch (e) {
+        console.error('[TTS]', e);
+    }
 }
 
 function stopSpeak() {
-    if (!window.speechSynthesis) return;
-    speechSynthesis.cancel();
-    // 일부 브라우저에서 cancel이 즉시 안 먹는 경우 대비
-    setTimeout(() => speechSynthesis.cancel(), 100);
-    setTimeout(() => speechSynthesis.cancel(), 300);
+    if (ttsAudio) {
+        ttsAudio.pause();
+        ttsAudio.currentTime = 0;
+        ttsAudio = null;
+    }
 }
 
 ttsToggle.addEventListener('click', () => {
@@ -449,7 +717,7 @@ function addSpeakBtn(msgDiv) {
     btn.innerHTML = '<i class="fas fa-volume-up"></i>';
     btn.addEventListener('click', () => {
         const text = msgDiv.textContent;
-        if (speechSynthesis.speaking) {
+        if (ttsAudio && !ttsAudio.paused) {
             stopSpeak();
             btn.classList.remove('speaking');
         } else {
@@ -458,10 +726,8 @@ function addSpeakBtn(msgDiv) {
             speak(text);
             ttsEnabled = prevEnabled;
             btn.classList.add('speaking');
-            const utter = speechSynthesis.speaking;
-            // speaking 해제 감지
             const check = setInterval(() => {
-                if (!speechSynthesis.speaking) {
+                if (!ttsAudio || ttsAudio.paused) {
                     btn.classList.remove('speaking');
                     clearInterval(check);
                 }
@@ -665,11 +931,30 @@ async function selectDate(date) {
         const res = await fetch(`/api/availability/${date}`);
         const info = await res.json();
         addMsg(`${label} 선택`, 'user');
-        addMsg(`${label} 잔여 <strong>${info.available}</strong>면 확인됩니다.<br>차량번호를 입력해 주세요. (예: 12가3456)`, 'bot');
-        reserveState = { step: 'carNumber', date, dateLabel: label };
+
+        if (currentUser) {
+            // 로그인 상태 → 이름 자동 불러오기
+            addMsg(`${label} 잔여 <strong>${info.available}</strong>면 확인됩니다.<br><strong>${currentUser.name}</strong>님으로 예약을 진행합니다.${currentUser.car ? '<br>등록 차량: ' + currentUser.car : ''}<br><br>차량번호를 입력해 주세요. (예: 12가3456)${currentUser.car ? '<br>또는 등록된 차량으로 진행하려면 <strong>"등록차량"</strong>이라고 입력하세요.' : ''}`, 'bot');
+            reserveState = { step: 'carNumber', date, dateLabel: label, userName: currentUser.name };
+        } else {
+            // 비로그인 → 이름 먼저 질문
+            addMsg(`${label} 잔여 <strong>${info.available}</strong>면 확인됩니다.<br>예약자 이름을 입력해 주세요.`, 'bot');
+            reserveState = { step: 'name', date, dateLabel: label };
+        }
     } catch (e) {
         addMsg('날짜 정보를 확인할 수 없습니다.', 'bot');
     }
+}
+
+function inputName(name) {
+    if (name.length < 2) {
+        addMsg('이름을 2글자 이상 입력해 주세요.', 'bot');
+        return;
+    }
+    reserveState.userName = name;
+    reserveState.step = 'carNumber';
+    addMsg(name, 'user');
+    addMsg(`<strong>${name}</strong>님, 차량번호를 입력해 주세요. (예: 12가3456)`, 'bot');
 }
 
 const DISCOUNTS = [
@@ -682,6 +967,11 @@ const DISCOUNTS = [
 ];
 
 function inputCarNumber(carNumber) {
+    // "등록차량" 입력 시 로그인된 차량번호 사용
+    if (carNumber === '등록차량' && currentUser && currentUser.car) {
+        carNumber = currentUser.car;
+    }
+
     if (!/^\d{2,3}[가-힣]\d{4}$/.test(carNumber)) {
         addMsg('차량번호 형식을 확인해 주세요. (예: 12가3456, 123가4567)', 'bot');
         return;
@@ -718,6 +1008,7 @@ function selectDiscount(discountId) {
 
     const html = `<div class="reserve-confirm">
         <strong>예약 정보 확인</strong><br>
+        예약자: ${reserveState.userName || '(미입력)'}<br>
         날짜: ${reserveState.dateLabel}<br>
         차량: ${reserveState.carNumber}<br>
         할인: ${disc.id === 'none' ? '없음' : disc.label}<br>
@@ -728,6 +1019,9 @@ function selectDiscount(discountId) {
         <button class="chat-action-btn secondary" onclick="resetReserve()">다시 입력</button>
     </div>`;
     addWidget(html);
+
+    // TTS: 예약 확인 안내
+    speak(`${reserveState.dateLabel}, ${reserveState.carNumber}, 결제금액 ${disc.amount === 0 ? '무료' : disc.amount.toLocaleString() + '원'}. 예약 정보를 확인하시고 예약 확정 버튼을 눌러주세요.`);
 }
 
 async function confirmReserve() {
@@ -756,6 +1050,7 @@ async function confirmReserve() {
                 <div class="done-icon"><i class="fas fa-check-circle"></i></div>
                 예약이 완료되었습니다!
                 <div class="done-no">${r.confirmNo}</div>
+                예약자: ${reserveState.userName || ''}<br>
                 ${reserveState.dateLabel} | ${r.carNumber}<br>
                 ${discLabel ? '할인: ' + discLabel + '<br>' : ''}
                 결제금액: ${r.amount.toLocaleString()}원${r.amount === 0 ? ' (무료)' : ''}<br><br>
@@ -763,6 +1058,9 @@ async function confirmReserve() {
                 취소는 전일 18:00까지 가능합니다.<br>
                 노쇼 시 이용 제한이 적용됩니다.</small>
             </div>`);
+
+            // TTS: 예약 완료 안내
+            speak(`${reserveState.dateLabel}로 예약되었습니다. 예약 정보를 확인하세요.`);
         } else {
             addMsg(result.error, 'bot');
         }
@@ -823,6 +1121,10 @@ function handleSend() {
 
     // 예약 플로우 중이면 단계에 따라 처리
     if (reserveState) {
+        if (reserveState.step === 'name') {
+            inputName(text);
+            return;
+        }
         if (reserveState.step === 'carNumber') {
             inputCarNumber(text);
             return;

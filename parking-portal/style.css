@@ -462,6 +462,81 @@ address { font-style: normal; }
 
 .btn-blue:hover { background: #003b73; }
 
+/* 검색 결과 */
+.search-result {
+    margin-top: 14px;
+}
+
+.result-warn {
+    font-size: 13px;
+    color: #e65100;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.result-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f8faf8;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.result-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.result-icon.ok { background: #e8f5e9; color: #2e7d32; }
+.result-icon.warn { background: #fff3e0; color: #e65100; }
+
+.result-text {
+    font-size: 14px;
+    color: #333;
+}
+
+.result-parking {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+}
+
+.result-parking:last-child { border-bottom: none; }
+
+.result-parking-name {
+    font-weight: 600;
+    color: #333;
+    min-width: 160px;
+}
+
+.result-parking-addr {
+    color: #888;
+    flex: 1;
+}
+
+.result-parking-status {
+    font-weight: 600;
+    font-size: 12px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    white-space: nowrap;
+}
+
+.result-parking-status.available { background: #e8f5e9; color: #2e7d32; }
+.result-parking-status.normal { background: #fff3e0; color: #e65100; }
+.result-parking-status.crowded { background: #fce4ec; color: #c62828; }
+
 /* ===== 실시간 주차현황 ===== */
 .realtime-parking {
     padding: 48px 0;
@@ -1430,6 +1505,285 @@ address { font-style: normal; }
 .pm-popup-stats i {
     color: #0055a5;
     font-size: 11px;
+}
+
+/* ===== 로그인 모달 ===== */
+.login-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 9999;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-overlay.open {
+    display: flex;
+}
+
+.login-modal {
+    background: #fff;
+    border-radius: 14px;
+    width: 380px;
+    max-width: 90vw;
+    box-shadow: 0 12px 40px rgba(0,0,0,.25);
+    overflow: hidden;
+    position: relative;
+}
+
+.login-close {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #fff;
+    cursor: pointer;
+    opacity: .8;
+    transition: opacity .2s;
+}
+
+.login-close:hover { opacity: 1; }
+
+.login-header {
+    background: linear-gradient(135deg, #0055a5, #003b73);
+    color: #fff;
+    padding: 24px 24px 20px;
+    text-align: center;
+}
+
+.login-header i {
+    font-size: 28px;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.login-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.login-body {
+    padding: 24px;
+}
+
+.login-field {
+    margin-bottom: 14px;
+}
+
+.login-field label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 6px;
+}
+
+.login-field input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border .2s;
+}
+
+.login-field input:focus {
+    border-color: #0055a5;
+}
+
+.login-submit {
+    width: 100%;
+    padding: 12px;
+    background: #0055a5;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+    margin-top: 4px;
+}
+
+.login-submit:hover { background: #003b73; }
+
+.login-divider {
+    text-align: center;
+    margin: 20px 0 14px;
+    position: relative;
+}
+
+.login-divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    background: #e0e0e0;
+}
+
+.login-divider span {
+    background: #fff;
+    padding: 0 12px;
+    font-size: 12px;
+    color: #999;
+    position: relative;
+}
+
+.login-test {
+    display: flex;
+    gap: 8px;
+}
+
+.login-test select {
+    flex: 1;
+    padding: 9px 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #333;
+    outline: none;
+    cursor: pointer;
+}
+
+.login-test-btn {
+    padding: 9px 16px;
+    background: #e67e00;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .2s;
+}
+
+.login-test-btn:hover { background: #d35400; }
+
+/* 로그인 후 상태 */
+.util-user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #555;
+}
+
+.util-user strong {
+    color: #0055a5;
+}
+
+.util-user .logout-btn {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-size: 12px;
+    color: #666;
+    cursor: pointer;
+    margin-left: 4px;
+    transition: all .2s;
+}
+
+.util-user .logout-btn:hover {
+    border-color: #d32f2f;
+    color: #d32f2f;
+}
+
+/* 회원가입 모달 확장 */
+.signup-modal {
+    width: 420px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.signup-modal .login-body {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.required { color: #d32f2f; font-size: 11px; }
+
+.field-with-btn {
+    display: flex;
+    gap: 8px;
+}
+
+.field-with-btn input { flex: 1; }
+
+.field-btn {
+    padding: 0 14px;
+    background: #555;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .2s;
+}
+
+.field-btn:hover { background: #333; }
+
+.field-msg {
+    display: block;
+    font-size: 11px;
+    margin-top: 4px;
+    min-height: 16px;
+}
+
+.field-msg.ok { color: #2e7d32; }
+.field-msg.err { color: #d32f2f; }
+
+.signup-agree {
+    margin: 16px 0 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.signup-agree label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+}
+
+.signup-agree label:first-child {
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 2px;
+}
+
+.signup-submit {
+    margin-top: 8px;
+}
+
+.signup-login-link {
+    text-align: center;
+    font-size: 12px;
+    color: #888;
+    margin-top: 14px;
+}
+
+.signup-login-link a {
+    color: #0055a5;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.signup-login-link a:hover {
+    text-decoration: underline;
 }
 
 /* ===== 관련 사이트 배너 ===== */

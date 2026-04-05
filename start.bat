@@ -15,6 +15,7 @@ echo 종료하려면 이 창을 닫으세요.
 echo.
 
 start "" http://localhost:3000/parking-portal/index.html
+start "" http://localhost:3000/manager.html
 
 node js/server.js
 
