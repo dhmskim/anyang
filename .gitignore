@@ -1,3 +1,4 @@
 node_modules/
 vectors.json
 .env
+data/logs/

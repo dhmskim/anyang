@@ -37,9 +37,9 @@ app.use('/api/auth/', authLimiter);
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
 // ===== JSON 파일 저장 (파일 잠금) =====
-const CONV_FILE = path.join(DATA_DIR, 'conversations.json');
-const COUNSEL_FILE = path.join(DATA_DIR, 'counselor_requests.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const LOG_DIR = path.join(DATA_DIR, 'logs');
+if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 
 let fileLocks = {};
 
@@ -60,8 +60,61 @@ function saveJSON(file, data) {
     }
 }
 
-let conversations = loadJSON(CONV_FILE);
-let counselorRequests = loadJSON(COUNSEL_FILE);
+// ===== 날짜별 로그 파일 =====
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+
+function getLogFile(prefix) {
+    return path.join(LOG_DIR, `${prefix}_${todayStr()}.log`);
+}
+
+function appendLog(prefix, entry) {
+    const line = JSON.stringify({ ...entry, _ts: new Date().toISOString() }) + '\n';
+    fs.appendFileSync(getLogFile(prefix), line, 'utf-8');
+}
+
+function readLogLines(prefix, date) {
+    const file = path.join(LOG_DIR, `${prefix}_${date || todayStr()}.log`);
+    if (!fs.existsSync(file)) return [];
+    return fs.readFileSync(file, 'utf-8').trim().split('\n').filter(Boolean).map(l => {
+        try { return JSON.parse(l); } catch { return null; }
+    }).filter(Boolean);
+}
+
+function readAllLogs(prefix) {
+    const files = fs.readdirSync(LOG_DIR).filter(f => f.startsWith(prefix + '_') && f.endsWith('.log')).sort();
+    const all = [];
+    for (const f of files) {
+        const lines = fs.readFileSync(path.join(LOG_DIR, f), 'utf-8').trim().split('\n').filter(Boolean);
+        for (const l of lines) { try { all.push(JSON.parse(l)); } catch {} }
+    }
+    return all;
+}
+
+// 메모리 캐시 (현재 세션만, 서버 재시작 시 로그에서 복원)
+let conversations = {};
+let counselorRequests = {};
+
+// 서버 시작 시 오늘+어제 로그에서 대화 복원
+function restoreFromLogs() {
+    const today = todayStr();
+    const d = new Date(); d.setDate(d.getDate() - 1);
+    const yesterday = d.toISOString().slice(0, 10);
+    for (const date of [yesterday, today]) {
+        const msgs = readLogLines('chat', date);
+        for (const m of msgs) {
+            if (!conversations[m.sessionId]) {
+                conversations[m.sessionId] = { sessionId: m.sessionId, createdAt: m._ts, messages: [], reservations: [], counselorRequested: false };
+            }
+            conversations[m.sessionId].messages.push({ role: m.role, content: m.content, timestamp: m._ts });
+        }
+        const counselors = readLogLines('counselor', date);
+        for (const c of counselors) {
+            counselorRequests[c.sessionId] = c;
+        }
+    }
+    console.log(`[Log] 복원 완료: 대화 ${Object.keys(conversations).length}건, 상담 ${Object.keys(counselorRequests).length}건`);
+}
+restoreFromLogs();
 
 // ===== 유저 관리 (영속성) =====
 function loadUsers() {
@@ -182,7 +235,7 @@ function getConv(sessionId) {
 function addMessage(sessionId, role, content) {
     const conv = getConv(sessionId);
     conv.messages.push({ role, content, timestamp: new Date().toISOString() });
-    saveJSON(CONV_FILE, conversations);
+    appendLog('chat', { sessionId, role, content });
 }
 
 function getHistory(sessionId, maxTurns = 10) {
@@ -261,7 +314,7 @@ app.post('/api/reserve', (req, res) => {
     const confirmNo = 'AY' + Date.now().toString().slice(-8);
     const reservation = { confirmNo, date, carNumber, amount, discountId: discountId || 'none', status: 'confirmed', createdAt: new Date().toISOString() };
     conv.reservations.push(reservation);
-    saveJSON(CONV_FILE, conversations);
+    appendLog('reserve', { sessionId: sessionId || 'unknown', action: 'confirm', ...reservation });
 
     res.json({ success: true, reservation });
 });
@@ -274,7 +327,7 @@ app.post('/api/cancel', (req, res) => {
     if (!reservation) return res.status(404).json({ error: '해당 확인번호의 예약을 찾을 수 없습니다.' });
 
     const now = new Date();
-    const deadline = new Date(reservation.date + 'T09:00:00'); // KST 18:00 = next day check
+    const deadline = new Date(reservation.date + 'T09:00:00');
     deadline.setDate(deadline.getDate() - 1);
     deadline.setHours(18, 0, 0, 0);
     if (now > deadline) return res.status(400).json({ error: '취소 기한(방문 전날 18:00)이 지났습니다.' });
@@ -282,7 +335,7 @@ app.post('/api/cancel', (req, res) => {
     reservation.status = 'cancelled';
     const info = parkingData[reservation.date];
     if (info) { info.reserved = Math.max(info.reserved - 1, 0); info.available = Math.min(info.available + 1, info.total); }
-    saveJSON(CONV_FILE, conversations);
+    appendLog('reserve', { sessionId, action: 'cancel', confirmNo, date: reservation.date });
 
     res.json({ success: true, message: `예약(${confirmNo})이 취소되었습니다. 환불은 3~5 영업일 내 처리됩니다.` });
 });
@@ -293,12 +346,12 @@ app.post('/api/counselor', (req, res) => {
     const conv = getConv(sessionId);
     conv.counselorRequested = true;
 
-    counselorRequests[sessionId] = {
+    const reqData = {
         sessionId, requestedAt: new Date().toISOString(), status: 'pending',
         lastMessage: conv.messages.length > 0 ? conv.messages[conv.messages.length - 1].content : ''
     };
-    saveJSON(COUNSEL_FILE, counselorRequests);
-    saveJSON(CONV_FILE, conversations);
+    counselorRequests[sessionId] = reqData;
+    appendLog('counselor', reqData);
 
     res.json({ success: true, message: '상담원 연결이 요청되었습니다. 관리사무소에서 곧 연락드리겠습니다.' });
 });
@@ -332,7 +385,7 @@ app.post('/api/admin/counselor-requests/:sessionId/resolve', authMiddleware, adm
     if (!cr) return res.status(404).json({ error: '요청을 찾을 수 없습니다.' });
     cr.status = 'resolved';
     cr.resolvedAt = new Date().toISOString();
-    saveJSON(COUNSEL_FILE, counselorRequests);
+    appendLog('counselor', { sessionId: req.params.sessionId, action: 'resolve', resolvedAt: cr.resolvedAt });
     res.json({ success: true });
 });
 
