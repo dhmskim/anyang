@@ -271,7 +271,14 @@
         try {
             const res = await fetch('/api/reserve', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId, date: reserveState.date, carNumber: reserveState.carNumber, discountId: reserveState.discount ? reserveState.discount.id : 'none' })
+                body: JSON.stringify({
+                    sessionId,
+                    date: reserveState.date,
+                    carNumber: reserveState.carNumber,
+                    discountId: reserveState.discount ? reserveState.discount.id : 'none',
+                    userName: reserveState.userName || null,
+                    userId: window.currentUser ? window.currentUser.id : null
+                })
             });
             typing.remove();
             const result = await res.json();

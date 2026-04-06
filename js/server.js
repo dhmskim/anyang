@@ -287,7 +287,7 @@ const DISCOUNTS = {
 };
 
 app.post('/api/reserve', (req, res) => {
-    const { sessionId, date, carNumber, discountId } = req.body;
+    const { sessionId, date, carNumber, discountId, userName, userId } = req.body;
     if (!date || !carNumber) return res.status(400).json({ error: '날짜와 차량번호를 입력해주세요.' });
     if (!/^\d{2,3}[가-힣]\d{4}$/.test(carNumber)) return res.status(400).json({ error: '차량번호 형식이 올바르지 않습니다.' });
 
@@ -304,9 +304,9 @@ app.post('/api/reserve', (req, res) => {
     const hasThisMonth = conv.reservations.some(r => r.date.startsWith(month) && r.status === 'confirmed');
     if (hasThisMonth) return res.status(400).json({ error: '월 1회 예약 제한을 초과했습니다.' });
 
-    // 서버에서 금액 계산
     const disc = DISCOUNTS[discountId] || DISCOUNTS.none;
     const amount = disc.amount;
+    const userType = userId ? 'member' : 'guest';
 
     info.reserved++;
     info.available = Math.max(info.available - 1, 0);
@@ -314,7 +314,18 @@ app.post('/api/reserve', (req, res) => {
     const confirmNo = 'AY' + Date.now().toString().slice(-8);
     const reservation = { confirmNo, date, carNumber, amount, discountId: discountId || 'none', status: 'confirmed', createdAt: new Date().toISOString() };
     conv.reservations.push(reservation);
-    appendLog('reserve', { sessionId: sessionId || 'unknown', action: 'confirm', ...reservation });
+    appendLog('reserve', {
+        confirmNo,
+        action: 'confirm',
+        userType,
+        userId: userId || null,
+        userName: userName || null,
+        date,
+        carNumber,
+        discountId: discountId || 'none',
+        amount,
+        sessionId: sessionId || 'unknown'
+    });
 
     res.json({ success: true, reservation });
 });
@@ -335,7 +346,13 @@ app.post('/api/cancel', (req, res) => {
     reservation.status = 'cancelled';
     const info = parkingData[reservation.date];
     if (info) { info.reserved = Math.max(info.reserved - 1, 0); info.available = Math.min(info.available + 1, info.total); }
-    appendLog('reserve', { sessionId, action: 'cancel', confirmNo, date: reservation.date });
+    appendLog('reserve', {
+        confirmNo,
+        action: 'cancel',
+        date: reservation.date,
+        carNumber: reservation.carNumber,
+        sessionId
+    });
 
     res.json({ success: true, message: `예약(${confirmNo})이 취소되었습니다. 환불은 3~5 영업일 내 처리됩니다.` });
 });
