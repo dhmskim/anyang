@@ -1300,6 +1300,42 @@ address { font-style: normal; }
     border: none !important;
 }
 
+.pm-marker {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 13px;
+    border: 2.5px solid #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.3);
+    cursor: pointer;
+    transition: transform .2s;
+}
+
+.pm-marker:hover {
+    transform: scale(1.3);
+    z-index: 9999 !important;
+}
+
+/* Leaflet 툴팁 커스텀 */
+.leaflet-tooltip {
+    background: rgba(0,0,0,.8) !important;
+    color: #fff !important;
+    border: none !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    padding: 4px 10px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2) !important;
+}
+
+.leaflet-tooltip-top::before {
+    border-top-color: rgba(0,0,0,.8) !important;
+}
+
 .pm-wrap {
     position: relative;
     cursor: pointer;
