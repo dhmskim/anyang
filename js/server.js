@@ -27,8 +27,8 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(ROOT, 'parking-portal')));
 app.use('/css', express.static(path.join(ROOT, 'css')));
-app.use('/manager.html', express.static(path.join(ROOT, 'manager.html')));
-app.use('/js/manager.js', express.static(path.join(ROOT, 'js', 'manager.js')));
+app.get('/manager.html', (req, res) => res.sendFile(path.join(ROOT, 'manager.html')));
+app.get('/js/manager.js', (req, res) => res.sendFile(path.join(ROOT, 'js', 'manager.js')));
 
 // Rate Limiting
 const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' } });
