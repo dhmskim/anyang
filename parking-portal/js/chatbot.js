@@ -231,7 +231,12 @@
     }
 
     function inputName(name) {
-        if (name.length < 2) { addMsg('이름을 2글자 이상 입력해 주세요.', 'bot'); return; }
+        if (name.length < 2 || name.length > 10) {
+            addMsg('이름을 2~10글자로 입력해 주세요.', 'bot'); return;
+        }
+        if (!/^[가-힣a-zA-Z]+$/.test(name)) {
+            addMsg('이름에는 한글 또는 영문만 입력해 주세요.', 'bot'); return;
+        }
         reserveState.userName = name;
         reserveState.step = 'carNumber';
         addMsg(name, 'user');
@@ -331,11 +336,34 @@
         }
     });
 
+    // --- 의도 감지 (예약 플로우 중에도 우선 처리) ---
+    const INTENT_MAP = [
+        { keywords: ['혼잡', '현황', '잔여', '남은자리'], action: () => { reserveState = null; showCongestion(); } },
+        { keywords: ['예약', '주차예약', '예약하고'], action: () => { reserveState = null; startReserve(); } },
+        { keywords: ['취소', '변경', '취소하고'], action: () => { reserveState = null; showCancel(); } },
+        { keywords: ['상담원', '상담', '연결'], action: () => { reserveState = null; counselorBtn.click(); } },
+    ];
+
+    function detectIntent(text) {
+        const t = text.replace(/\s+/g, '');
+        // 2글자 이하 한글만 입력은 이름일 가능성 → 감지 건너뜀
+        if (/^[가-힣]{2,3}$/.test(t)) return null;
+        for (const intent of INTENT_MAP) {
+            if (intent.keywords.some(kw => t.includes(kw))) return intent;
+        }
+        return null;
+    }
+
     // --- 메시지 전송 ---
     function handleSend() {
         const text = chatbotInput.value.trim();
         if (!text) return;
         chatbotInput.value = '';
+
+        // 의도 키워드 우선 감지 (플로우 중에도)
+        const intent = detectIntent(text);
+        if (intent) { intent.action(); return; }
+
         if (reserveState) {
             if (reserveState.step === 'name') { inputName(text); return; }
             if (reserveState.step === 'carNumber') { inputCarNumber(text); return; }
