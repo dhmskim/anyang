@@ -21,14 +21,26 @@ const DATA_DIR = path.join(ROOT, 'data');
 // 시스템 프롬프트
 const systemPrompt = fs.readFileSync(path.join(ROOT, 'system_prompt.txt'), 'utf-8');
 
-// ===== 미들웨어 =====
-app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
-app.use(cors());
-app.use(express.json());
+const ADMIN_PORT = process.env.ADMIN_PORT || 3001;
+
+// ===== 공통 미들웨어 =====
+const commonMiddleware = [
+    helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }),
+    cors(),
+    express.json()
+];
+commonMiddleware.forEach(mw => app.use(mw));
+
+// 사용자 포털 정적 파일 (3000)
 app.use(express.static(path.join(ROOT, 'parking-portal')));
-app.use('/css', express.static(path.join(ROOT, 'css')));
-app.get('/manager.html', (req, res) => res.sendFile(path.join(ROOT, 'manager.html')));
-app.get('/js/manager.js', (req, res) => res.sendFile(path.join(ROOT, 'js', 'manager.js')));
+
+// ===== 관리자 서버 (3001) =====
+const adminApp = express();
+commonMiddleware.forEach(mw => adminApp.use(mw));
+adminApp.use(express.static(path.join(ROOT, 'css')));
+adminApp.get('/', (req, res) => res.sendFile(path.join(ROOT, 'manager.html')));
+adminApp.get('/js/manager.js', (req, res) => res.sendFile(path.join(ROOT, 'js', 'manager.js')));
+adminApp.get('/css/manager.css', (req, res) => res.sendFile(path.join(ROOT, 'css', 'manager.css')));
 
 // Rate Limiting
 const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' } });
@@ -634,10 +646,21 @@ app.post('/api/chat', async (req, res) => {
     }
 });
 
+// ===== 관리자 앱에 API 프록시 =====
+adminApp.use('/api', (req, res, next) => {
+    // 메인 앱의 라우터로 위임
+    req.url = '/api' + req.url;
+    app.handle(req, res, next);
+});
+
 // ===== 서버 시작 =====
 app.listen(PORT, async () => {
-    console.log(`수목원 주차 챗봇 서버: http://localhost:${PORT}`);
+    console.log(`사용자 포털: http://localhost:${PORT}`);
     console.log(`Ollama: ${OLLAMA_URL} (모델: ${MODEL})`);
     try { await buildVectors(); } catch (e) { console.error('[RAG] 벡터 빌드 실패:', e.message); }
     preloadGeocode().catch(e => console.error('[Geocode] 사전 로딩 실패:', e.message));
+});
+
+adminApp.listen(ADMIN_PORT, () => {
+    console.log(`관리자 페이지: http://localhost:${ADMIN_PORT}`);
 });

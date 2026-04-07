@@ -19,7 +19,7 @@
         // 토큰 없거나 만료 → 로그인 페이지로 이동
         authToken = null;
         localStorage.removeItem('admin_token');
-        window.location.href = '/index.html';
+        window.location.href = '/';
     }
 
     // --- 페이지 전환 ---
@@ -47,7 +47,7 @@
         if (confirm('로그아웃 하시겠습니까?')) {
             authToken = null;
             localStorage.removeItem('admin_token');
-            window.location.href = '/index.html';
+            window.location.href = '/';
         }
     });
 
