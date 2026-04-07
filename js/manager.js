@@ -1,44 +1,132 @@
-// ===== 관리자 페이지 (JWT 인증 연동) =====
+// ===== 관리자 페이지 (JWT 인증 + 로그인 모달 + 승인 시스템) =====
 (function () {
     'use strict';
 
     let authToken = localStorage.getItem('admin_token') || null;
+    let currentAdmin = null;
+    const superAdminId = 'AD'; // 최고관리자 ID
 
-    // --- 인증 (자동 로그인 시도, 실패 시에도 페이지 표시) ---
     function authHeaders() {
         return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken };
     }
 
-    async function ensureAuth() {
-        if (authToken) {
-            try {
-                const res = await fetch('/api/admin/users', { headers: authHeaders() });
-                if (res.ok) return;
-            } catch {}
-        }
-        // 토큰 없거나 만료 → 로그인 프롬프트
-        authToken = null;
-        localStorage.removeItem('admin_token');
-        const id = prompt('관리자 아이디를 입력하세요:');
-        const pw = prompt('비밀번호를 입력하세요:');
-        if (!id || !pw) { document.body.innerHTML = '<h2 style="text-align:center;margin-top:100px">로그인이 필요합니다. 새로고침 후 다시 시도해주세요.</h2>'; return; }
+    // ===== 로그인/회원가입 오버레이 =====
+    const overlay = document.getElementById('adminAuthOverlay');
+    const loginForm = document.getElementById('adminLoginForm');
+    const signupForm = document.getElementById('adminSignupForm');
+    const adminLayout = document.querySelector('.admin-layout');
+
+    function showAuth() {
+        overlay.classList.add('show');
+        adminLayout.style.display = 'none';
+    }
+
+    function hideAuth() {
+        overlay.classList.remove('show');
+        adminLayout.style.display = 'flex';
+    }
+
+    // 로그인 ↔ 회원가입 전환
+    document.getElementById('goAdminSignup').addEventListener('click', (e) => {
+        e.preventDefault();
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'block';
+        document.getElementById('adminSignupMsg').textContent = '';
+    });
+    document.getElementById('goAdminLogin').addEventListener('click', (e) => {
+        e.preventDefault();
+        signupForm.style.display = 'none';
+        loginForm.style.display = 'block';
+        document.getElementById('adminLoginMsg').textContent = '';
+    });
+
+    // --- 로그인 ---
+    document.getElementById('adminLoginBtn').addEventListener('click', doLogin);
+    document.getElementById('adminLoginPw').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+
+    async function doLogin() {
+        const id = document.getElementById('adminLoginId').value.trim();
+        const pw = document.getElementById('adminLoginPw').value;
+        const msg = document.getElementById('adminLoginMsg');
+        msg.textContent = '';
+        if (!id || !pw) { msg.textContent = '아이디와 비밀번호를 입력해주세요.'; return; }
+
         try {
             const res = await fetch('/api/auth/login', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id, pw })
             });
             const data = await res.json();
-            if (data.success && data.user.role === 'admin') {
+            if (data.success) {
+                if (data.user.role !== 'admin') {
+                    msg.textContent = '관리자 계정만 접근 가능합니다.';
+                    return;
+                }
                 authToken = data.token;
+                currentAdmin = data.user;
                 localStorage.setItem('admin_token', authToken);
-                return;
+                hideAuth();
+                initDashboard();
+            } else {
+                msg.textContent = data.error;
             }
-            alert(data.error || '관리자 계정이 아닙니다.');
-            document.body.innerHTML = '<h2 style="text-align:center;margin-top:100px">로그인 실패. 새로고침 후 다시 시도해주세요.</h2>';
         } catch {
-            alert('서버에 연결할 수 없습니다.');
-            document.body.innerHTML = '<h2 style="text-align:center;margin-top:100px">서버 연결 실패</h2>';
+            msg.textContent = '서버에 연결할 수 없습니다.';
         }
+    }
+
+    // --- 관리자 회원가입 ---
+    document.getElementById('adminSignupBtn').addEventListener('click', doSignup);
+
+    async function doSignup() {
+        const id = document.getElementById('adminSignupId').value.trim();
+        const pw = document.getElementById('adminSignupPw').value;
+        const pwc = document.getElementById('adminSignupPwConfirm').value;
+        const name = document.getElementById('adminSignupName').value.trim();
+        const phone = document.getElementById('adminSignupPhone').value.trim();
+        const msg = document.getElementById('adminSignupMsg');
+        msg.textContent = '';
+        msg.classList.remove('success');
+
+        if (!id || !pw || !name || !phone) { msg.textContent = '모든 항목을 입력해주세요.'; return; }
+        if (!/^[a-zA-Z0-9]{4,20}$/.test(id)) { msg.textContent = '아이디는 영문, 숫자 4~20자입니다.'; return; }
+        if (pw.length < 8) { msg.textContent = '비밀번호는 8자 이상입니다.'; return; }
+        if (pw !== pwc) { msg.textContent = '비밀번호가 일치하지 않습니다.'; return; }
+
+        try {
+            const res = await fetch('/api/auth/admin-signup', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, pw, name, phone })
+            });
+            const data = await res.json();
+            if (data.success) {
+                msg.classList.add('success');
+                msg.textContent = data.message;
+                document.getElementById('adminSignupBtn').disabled = true;
+            } else {
+                msg.textContent = data.error;
+            }
+        } catch {
+            msg.textContent = '서버에 연결할 수 없습니다.';
+        }
+    }
+
+    // ===== 인증 확인 =====
+    async function ensureAuth() {
+        if (authToken) {
+            try {
+                const res = await fetch('/api/admin/users', { headers: authHeaders() });
+                if (res.ok) {
+                    // 토큰에서 유저 정보 추출
+                    const payload = JSON.parse(atob(authToken.split('.')[1]));
+                    currentAdmin = { id: payload.id, name: payload.name, role: payload.role };
+                    return true;
+                }
+            } catch {}
+        }
+        authToken = null;
+        localStorage.removeItem('admin_token');
+        return false;
     }
 
     // --- 페이지 전환 ---
@@ -65,12 +153,18 @@
     document.getElementById('adminLogout').addEventListener('click', () => {
         if (confirm('로그아웃 하시겠습니까?')) {
             authToken = null;
+            currentAdmin = null;
             localStorage.removeItem('admin_token');
-            window.location.reload();
+            showAuth();
+            loginForm.style.display = 'block';
+            signupForm.style.display = 'none';
+            document.getElementById('adminLoginId').value = '';
+            document.getElementById('adminLoginPw').value = '';
+            document.getElementById('adminLoginMsg').textContent = '';
         }
     });
 
-    // ===== 유저 관리 (서버 API 연동, 영속성) =====
+    // ===== 유저 관리 =====
     const userTableBody = document.getElementById('userTableBody');
     const userSearch = document.getElementById('userSearch');
     const userModal = document.getElementById('userModal');
@@ -86,35 +180,70 @@
         } catch {}
     }
 
+    function isSuperAdmin() {
+        return currentAdmin && currentAdmin.id.toLowerCase() === superAdminId.toLowerCase();
+    }
+
     function renderUsers() {
         const keyword = userSearch.value.trim().toLowerCase();
         const filtered = usersCache.filter(u =>
             !keyword || u.id.toLowerCase().includes(keyword) || u.name.includes(keyword) || (u.car || '').includes(keyword) || u.phone.includes(keyword)
         );
-        userTableBody.innerHTML = filtered.map(u => `<tr>
+        userTableBody.innerHTML = filtered.map(u => {
+            const statusText = u.status === 'active' ? '활성' : u.status === 'pending' ? '승인대기' : '비활성';
+            const statusClass = u.status === 'pending' ? 'pending' : u.status;
+            const approveBtn = (u.status === 'pending' && isSuperAdmin())
+                ? `<button class="approve-btn" data-approve-id="${escapeHtml(u.id)}" title="승인"><i class="fas fa-check"></i></button><button class="reject-btn" data-reject-id="${escapeHtml(u.id)}" title="거절"><i class="fas fa-ban"></i></button>`
+                : '';
+            return `<tr>
             <td><input type="checkbox" class="user-check" data-id="${escapeHtml(u.id)}"></td>
             <td><strong>${escapeHtml(u.id)}</strong></td>
             <td>${escapeHtml(u.name)}</td>
             <td>${escapeHtml(u.phone)}</td>
             <td>${u.car ? escapeHtml(u.car) : '<span style="color:#ccc">-</span>'}</td>
             <td><span class="role-badge ${u.role}">${u.role === 'admin' ? '관리자' : '사용자'}</span></td>
-            <td><span class="status-dot ${u.status}">${u.status === 'active' ? '활성' : '비활성'}</span></td>
+            <td><span class="status-dot ${statusClass}">${statusText}</span></td>
             <td>${u.joinDate}</td>
             <td><div class="action-btns">
+                ${approveBtn}
                 <button class="edit-btn" data-edit-id="${escapeHtml(u.id)}"><i class="fas fa-pen"></i></button>
                 <button class="del-btn" data-del-id="${escapeHtml(u.id)}"><i class="fas fa-trash"></i></button>
             </div></td>
-        </tr>`).join('');
+        </tr>`;
+        }).join('');
 
+        const pending = usersCache.filter(u => u.status === 'pending').length;
         document.getElementById('statTotal').textContent = usersCache.length;
         document.getElementById('statActive').textContent = usersCache.filter(u => u.status === 'active').length;
         document.getElementById('statInactive').textContent = usersCache.filter(u => u.status !== 'active').length;
         const today = new Date().toISOString().slice(0, 10);
         document.getElementById('statToday').textContent = usersCache.filter(u => u.joinDate === today).length;
 
-        // 이벤트 위임
+        // 이벤트
         userTableBody.querySelectorAll('.edit-btn').forEach(btn => btn.addEventListener('click', () => openEditUser(btn.dataset.editId)));
         userTableBody.querySelectorAll('.del-btn').forEach(btn => btn.addEventListener('click', () => deleteUser(btn.dataset.delId)));
+        userTableBody.querySelectorAll('.approve-btn').forEach(btn => btn.addEventListener('click', () => approveUser(btn.dataset.approveId)));
+        userTableBody.querySelectorAll('.reject-btn').forEach(btn => btn.addEventListener('click', () => rejectUser(btn.dataset.rejectId)));
+    }
+
+    async function approveUser(userId) {
+        if (!confirm(`"${userId}" 관리자 가입을 승인하시겠습니까?`)) return;
+        try {
+            const res = await fetch('/api/admin/users/' + encodeURIComponent(userId) + '/approve', { method: 'POST', headers: authHeaders() });
+            const data = await res.json();
+            if (data.success) loadUsers();
+            else alert(data.error);
+        } catch { alert('승인 실패'); }
+    }
+
+    async function rejectUser(userId) {
+        if (!confirm(`"${userId}" 가입 신청을 거절하시겠습니까? (데이터가 삭제됩니다)`)) return;
+        try {
+            const res = await fetch('/api/admin/users/' + encodeURIComponent(userId) + '/reject', { method: 'POST', headers: authHeaders() });
+            const data = await res.json();
+            if (data.success) loadUsers();
+            else alert(data.error);
+        } catch { alert('거절 실패'); }
     }
 
     userSearch.addEventListener('input', renderUsers);
@@ -189,7 +318,7 @@
         } catch { alert('삭제 실패'); }
     }
 
-    // ===== 대화 내역 (관리자 시점 + 읽음/안읽음) =====
+    // ===== 대화 내역 =====
     const readMessages = JSON.parse(localStorage.getItem('admin_read_msgs') || '{}');
     function markAsRead(sid) { readMessages[sid] = true; localStorage.setItem('admin_read_msgs', JSON.stringify(readMessages)); }
 
@@ -290,11 +419,11 @@
 
     // ===== API / 구현 문서 =====
     const DOCS = [
-        { icon: 'fa-server', color: '#1565c0', title: '서버 구조', desc: 'Express 서버 및 라우팅', content: `<h3>서버 구조</h3><table class="doc-table"><tr><th>항목</th><th>내용</th></tr><tr><td>프레임워크</td><td>Express.js (Node.js)</td></tr><tr><td>포트</td><td>환경변수 PORT (기본 3000)</td></tr><tr><td>보안</td><td>Helmet, Rate Limiting, JWT 인증</td></tr><tr><td>진입점</td><td>js/server.js</td></tr></table>` },
-        { icon: 'fa-plug', color: '#e65100', title: 'REST API', desc: '전체 API 엔드포인트', content: `<h3>REST API</h3><table class="doc-table"><tr><th>Method</th><th>URL</th><th>인증</th><th>설명</th></tr><tr><td><span class="method post">POST</span></td><td>/api/auth/login</td><td>-</td><td>로그인 (JWT 발급)</td></tr><tr><td><span class="method post">POST</span></td><td>/api/auth/signup</td><td>-</td><td>회원가입</td></tr><tr><td><span class="method get">GET</span></td><td>/api/availability</td><td>-</td><td>주차장 잔여 현황</td></tr><tr><td><span class="method post">POST</span></td><td>/api/reserve</td><td>-</td><td>주차 예약</td></tr><tr><td><span class="method post">POST</span></td><td>/api/cancel</td><td>-</td><td>예약 취소</td></tr><tr><td><span class="method post">POST</span></td><td>/api/chat</td><td>-</td><td>AI 채팅 (SSE)</td></tr><tr><td><span class="method post">POST</span></td><td>/api/tts</td><td>-</td><td>Edge TTS 음성</td></tr><tr><td><span class="method get">GET</span></td><td>/api/admin/*</td><td>JWT</td><td>관리자 전용</td></tr></table>` },
-        { icon: 'fa-robot', color: '#6a1b9a', title: 'AI 챗봇', desc: 'Ollama + RAG 동작 방식', content: `<h3>AI 챗봇</h3><table class="doc-table"><tr><th>항목</th><th>내용</th></tr><tr><td>AI 엔진</td><td>Ollama (로컬 LLM)</td></tr><tr><td>모델</td><td>환경변수 OLLAMA_MODEL</td></tr><tr><td>RAG</td><td>knowledge/ 폴더 .md 파일 벡터 검색</td></tr><tr><td>응답</td><td>SSE 스트리밍</td></tr></table><h4>흐름</h4><ol><li>사용자 메시지 → RAG 검색</li><li>시스템 프롬프트 + RAG + 현황 + 히스토리</li><li>Ollama 스트리밍 → 토큰 SSE 전송</li></ol>` },
-        { icon: 'fa-folder-open', color: '#2e7d32', title: '파일 구조', desc: '프로젝트 디렉토리', content: `<h3>파일 구조</h3><pre class="doc-tree">수목원 챗봇/\n├── .env                   # 환경변수\n├── start.bat              # 실행 스크립트\n├── js/server.js           # Express 서버\n├── js/rag.js              # RAG 엔진\n├── js/manager.js          # 관리자 스크립트\n├── knowledge/             # RAG 문서\n├── data/                  # JSON 데이터\n│   ├── conversations.json\n│   ├── counselor_requests.json\n│   └── users.json\n└── parking-portal/\n    ├── index.html\n    ├── js/portal-ui.js    # 포털 UI\n    ├── js/auth.js         # 로그인/회원가입\n    └── js/chatbot.js      # 챗봇</pre>` },
-        { icon: 'fa-database', color: '#c62828', title: '데이터 저장', desc: '파일 기반 저장 + 잠금', content: `<h3>데이터 저장</h3><table class="doc-table"><tr><th>데이터</th><th>파일</th></tr><tr><td>대화 내역</td><td>data/conversations.json</td></tr><tr><td>상담 요청</td><td>data/counselor_requests.json</td></tr><tr><td>유저 정보</td><td>data/users.json (비밀번호 bcrypt 해시)</td></tr><tr><td>주차 현황</td><td>메모리 (5분 갱신)</td></tr></table><p>파일 저장 시 tmp → rename 원자적 쓰기 + 잠금 처리</p>` },
+        { icon: 'fa-server', color: '#1565c0', title: '서버 구조', desc: 'Express 서버 및 라우팅', content: `<h3>서버 구조</h3><table class="doc-table"><tr><th>항목</th><th>내용</th></tr><tr><td>프레임워크</td><td>Express.js (Node.js)</td></tr><tr><td>사용자 포트</td><td>3000</td></tr><tr><td>관리자 포트</td><td>3001</td></tr><tr><td>보안</td><td>Helmet, Rate Limiting, JWT 인증</td></tr><tr><td>진입점</td><td>js/server.js</td></tr></table>` },
+        { icon: 'fa-plug', color: '#e65100', title: 'REST API', desc: '전체 API 엔드포인트', content: `<h3>REST API</h3><table class="doc-table"><tr><th>Method</th><th>URL</th><th>인증</th><th>설명</th></tr><tr><td><span class="method post">POST</span></td><td>/api/auth/login</td><td>-</td><td>로그인 (JWT 발급)</td></tr><tr><td><span class="method post">POST</span></td><td>/api/auth/signup</td><td>-</td><td>회원가입</td></tr><tr><td><span class="method post">POST</span></td><td>/api/auth/admin-signup</td><td>-</td><td>관리자 가입 신청 (승인 대기)</td></tr><tr><td><span class="method get">GET</span></td><td>/api/availability</td><td>-</td><td>주차장 잔여 현황</td></tr><tr><td><span class="method post">POST</span></td><td>/api/reserve</td><td>-</td><td>주차 예약</td></tr><tr><td><span class="method post">POST</span></td><td>/api/cancel</td><td>-</td><td>예약 취소</td></tr><tr><td><span class="method post">POST</span></td><td>/api/chat</td><td>-</td><td>AI 채팅 (SSE)</td></tr><tr><td><span class="method post">POST</span></td><td>/api/admin/users/:id/approve</td><td>JWT(최고관리자)</td><td>관리자 가입 승인</td></tr><tr><td><span class="method get">GET</span></td><td>/api/admin/*</td><td>JWT</td><td>관리자 전용</td></tr></table>` },
+        { icon: 'fa-robot', color: '#6a1b9a', title: 'AI 챗봇', desc: 'Ollama + RAG 동작 방식', content: `<h3>AI 챗봇</h3><table class="doc-table"><tr><th>항목</th><th>내용</th></tr><tr><td>AI 엔진</td><td>Ollama (로컬 LLM)</td></tr><tr><td>모델</td><td>환경변수 OLLAMA_MODEL</td></tr><tr><td>RAG</td><td>knowledge/ 폴더 .md 파일 벡터 검색</td></tr><tr><td>응답</td><td>SSE 스트리밍</td></tr></table>` },
+        { icon: 'fa-folder-open', color: '#2e7d32', title: '파일 구조', desc: '프로젝트 디렉토리', content: `<h3>파일 구조</h3><pre class="doc-tree">수목원 챗봇/\n├── .env\n├── start.bat\n├── js/server.js\n├── js/rag.js\n├── js/manager.js\n├── knowledge/\n├── data/\n│   ├── users.json\n│   └── logs/\n└── parking-portal/\n    ├── index.html\n    ├── js/portal-ui.js\n    ├── js/auth.js\n    └── js/chatbot.js</pre>` },
+        { icon: 'fa-database', color: '#c62828', title: '데이터 저장', desc: '파일 기반 저장 + 로그', content: `<h3>데이터 저장</h3><table class="doc-table"><tr><th>데이터</th><th>저장</th></tr><tr><td>대화 내역</td><td>data/logs/chat_YYYY-MM-DD.log</td></tr><tr><td>예약/취소</td><td>data/logs/reserve_YYYY-MM-DD.log</td></tr><tr><td>상담 요청</td><td>data/logs/counselor_YYYY-MM-DD.log</td></tr><tr><td>유저 정보</td><td>data/users.json (bcrypt 해시)</td></tr><tr><td>주차 현황</td><td>메모리 (5분 갱신)</td></tr></table>` },
         { icon: 'fa-calendar-check', color: '#00838f', title: '예약 정책', desc: '비즈니스 룰', content: `<h3>예약 정책</h3><table class="doc-table"><tr><th>규칙</th><th>내용</th></tr><tr><td>예약 기간</td><td>내일 ~ 7일 후</td></tr><tr><td>월 횟수</td><td>1회</td></tr><tr><td>휴원일</td><td>매주 월요일</td></tr><tr><td>총 면수</td><td>50면</td></tr><tr><td>취소 기한</td><td>전날 18:00</td></tr><tr><td>금액</td><td>서버에서 할인 ID 기반 계산</td></tr></table>` }
     ];
 
@@ -311,14 +440,24 @@
     });
     document.getElementById('docsBack').addEventListener('click', () => { docsViewer.style.display = 'none'; docsGrid.style.display = 'grid'; });
 
-    // ===== 초기화 =====
-    window.loadConversations = loadConversations;
-    window.loadCounselorRequests = loadCounselorRequests;
-
-    ensureAuth().then(() => {
+    // ===== 대시보드 초기화 =====
+    function initDashboard() {
         loadUsers();
         loadConversations();
         loadCounselorRequests();
         setInterval(() => { loadConversations(); loadCounselorRequests(); }, 30000);
+    }
+
+    window.loadConversations = loadConversations;
+    window.loadCounselorRequests = loadCounselorRequests;
+
+    // ===== 시작 =====
+    ensureAuth().then(ok => {
+        if (ok) {
+            hideAuth();
+            initDashboard();
+        } else {
+            showAuth();
+        }
     });
 })();

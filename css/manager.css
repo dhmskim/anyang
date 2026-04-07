@@ -479,7 +479,17 @@ body {
 }
 
 .status-dot.active::before { background: #4caf50; }
+.status-dot.pending::before { background: #ffa726; }
 .status-dot.inactive::before { background: #ef5350; }
+
+.approve-btn, .reject-btn {
+    padding: 5px 10px; border: 1px solid #ddd; border-radius: 6px;
+    font-size: 11px; cursor: pointer; background: #fff; transition: all .2s;
+}
+.approve-btn { color: #2e7d32; }
+.approve-btn:hover { border-color: #2e7d32; background: #e8f5e9; }
+.reject-btn { color: #c62828; }
+.reject-btn:hover { border-color: #c62828; background: #ffebee; }
 
 .action-btns {
     display: flex;
@@ -786,6 +796,74 @@ body {
     overflow-x: auto;
     border: 1px solid #e0e0e0;
 }
+
+/* ===== 관리자 로그인/회원가입 오버레이 ===== */
+.admin-auth-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #1a1a2e;
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+}
+
+.admin-auth-overlay.show { display: flex; }
+
+.admin-auth-box {
+    width: 420px;
+    max-width: 92vw;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.admin-auth-form {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 16px 60px rgba(0,0,0,.4);
+    overflow: hidden;
+}
+
+.admin-auth-header {
+    background: linear-gradient(135deg, #1a1a2e, #16213e);
+    color: #fff;
+    padding: 32px 28px 24px;
+    text-align: center;
+}
+
+.admin-auth-header i { font-size: 32px; margin-bottom: 10px; color: #4caf50; }
+.admin-auth-header h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+.admin-auth-header p { font-size: 12px; opacity: .6; }
+
+.admin-auth-body { padding: 28px; }
+
+.admin-auth-field { margin-bottom: 16px; }
+.admin-auth-field label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 6px; }
+.admin-auth-field input {
+    width: 100%; padding: 11px 14px; border: 1px solid #ddd; border-radius: 8px;
+    font-size: 14px; outline: none; transition: border .2s;
+}
+.admin-auth-field input:focus { border-color: #4caf50; }
+
+.admin-auth-msg {
+    font-size: 13px; min-height: 20px; margin-bottom: 8px;
+    color: #c62828; text-align: center;
+}
+.admin-auth-msg.success { color: #2e7d32; }
+
+.admin-auth-btn {
+    width: 100%; padding: 12px; border: none; border-radius: 8px;
+    font-size: 15px; font-weight: 600; cursor: pointer; transition: background .2s;
+}
+.admin-auth-btn.primary { background: #4caf50; color: #fff; }
+.admin-auth-btn.primary:hover { background: #388e3c; }
+.admin-auth-btn.primary:disabled { background: #ccc; cursor: default; }
+
+.admin-auth-link {
+    text-align: center; margin-top: 18px; font-size: 13px; color: #888;
+}
+.admin-auth-link a { color: #4caf50; font-weight: 600; text-decoration: none; }
+.admin-auth-link a:hover { text-decoration: underline; }
 
 /* 반응형 */
 @media (max-width: 900px) {

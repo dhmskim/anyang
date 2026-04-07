@@ -176,6 +176,7 @@ app.post('/api/auth/login', (req, res) => {
     if (!user || !bcrypt.compareSync(pw, user.pw)) {
         return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
     }
+    if (user.status === 'pending') return res.status(403).json({ error: '승인 대기 중인 계정입니다. 최고관리자 승인 후 로그인 가능합니다.' });
     if (user.status !== 'active') return res.status(403).json({ error: '비활성 계정입니다.' });
     const token = jwt.sign({ id: user.id, name: user.name, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
     res.json({ success: true, token, user: { id: user.id, name: user.name, role: user.role, phone: user.phone, car: user.car } });
@@ -200,6 +201,45 @@ app.post('/api/auth/signup', (req, res) => {
 app.get('/api/auth/check-id/:id', (req, res) => {
     const exists = users.some(u => u.id.toLowerCase() === req.params.id.toLowerCase());
     res.json({ available: !exists });
+});
+
+// 관리자 회원가입 (승인 대기)
+app.post('/api/auth/admin-signup', (req, res) => {
+    const { id, pw, name, phone } = req.body;
+    if (!id || !pw || !name || !phone) return res.status(400).json({ error: '필수 항목을 입력해주세요.' });
+    if (!/^[a-zA-Z0-9]{4,20}$/.test(id)) return res.status(400).json({ error: '아이디는 영문, 숫자 4~20자입니다.' });
+    if (pw.length < 8) return res.status(400).json({ error: '비밀번호는 8자 이상입니다.' });
+    if (users.find(u => u.id.toLowerCase() === id.toLowerCase())) return res.status(409).json({ error: '이미 존재하는 아이디입니다.' });
+
+    const hash = bcrypt.hashSync(pw, 10);
+    const today = new Date().toISOString().slice(0, 10);
+    users.push({ id, pw: hash, name, phone, car: '', role: 'admin', status: 'pending', joinDate: today });
+    saveUsers();
+    res.json({ success: true, message: '가입 신청이 완료되었습니다. 최고관리자 승인 후 로그인 가능합니다.' });
+});
+
+// 관리자 승인 (superadmin만)
+function superAdminOnly(req, res, next) {
+    const superAdminId = (process.env.ADMIN_ID || 'AD').toLowerCase();
+    if (req.user.id.toLowerCase() !== superAdminId) return res.status(403).json({ error: '최고관리자만 승인할 수 있습니다.' });
+    next();
+}
+
+app.post('/api/admin/users/:id/approve', authMiddleware, adminOnly, superAdminOnly, (req, res) => {
+    const user = users.find(u => u.id === req.params.id);
+    if (!user) return res.status(404).json({ error: '유저 없음' });
+    if (user.status !== 'pending') return res.status(400).json({ error: '승인 대기 상태가 아닙니다.' });
+    user.status = 'active';
+    saveUsers();
+    res.json({ success: true });
+});
+
+app.post('/api/admin/users/:id/reject', authMiddleware, adminOnly, superAdminOnly, (req, res) => {
+    const idx = users.findIndex(u => u.id === req.params.id && u.status === 'pending');
+    if (idx === -1) return res.status(404).json({ error: '승인 대기 유저를 찾을 수 없습니다.' });
+    users.splice(idx, 1);
+    saveUsers();
+    res.json({ success: true });
 });
 
 // ===== 관리자: 유저 관리 =====
