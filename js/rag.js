@@ -1,8 +1,9 @@
+require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 
-const OLLAMA_URL = 'http://172.31.0.210:11434';
-const EMBED_MODEL = 'nomic-embed-text:latest';
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const EMBED_MODEL = process.env.EMBED_MODEL || 'nomic-embed-text:latest';
 const ROOT = path.join(__dirname, '..');
 const KNOWLEDGE_DIR = path.join(ROOT, 'knowledge');
 const VECTORS_FILE = path.join(ROOT, 'data', 'vectors.json');

@@ -5,8 +5,6 @@
     const loginOverlay = document.getElementById('loginOverlay');
     const loginClose = document.getElementById('loginClose');
     const loginSubmit = document.getElementById('loginSubmit');
-    const testLoginBtn = document.getElementById('testLoginBtn');
-    const testAccount = document.getElementById('testAccount');
     const loginIdInput = document.getElementById('loginId');
     const loginPwInput = document.getElementById('loginPw');
     const utilRight = document.getElementById('utilRight');
@@ -86,16 +84,6 @@
     });
 
     loginPwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') loginSubmit.click(); });
-
-    // --- 테스트 계정 ---
-    testLoginBtn.addEventListener('click', () => {
-        const val = testAccount.value;
-        if (!val) { alert('테스트 계정을 선택하세요.'); return; }
-        const [id, pw] = val.split('|');
-        loginIdInput.value = id;
-        loginPwInput.value = pw;
-        loginSubmit.click();
-    });
 
     // --- 회원가입 모달 ---
     signupCloseBtn.addEventListener('click', () => signupOverlay.classList.remove('open'));

@@ -25,7 +25,10 @@ const systemPrompt = fs.readFileSync(path.join(ROOT, 'system_prompt.txt'), 'utf-
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(cors());
 app.use(express.json());
-app.use(express.static(ROOT));
+app.use(express.static(path.join(ROOT, 'parking-portal')));
+app.use('/css', express.static(path.join(ROOT, 'css')));
+app.use('/manager.html', express.static(path.join(ROOT, 'manager.html')));
+app.use('/js/manager.js', express.static(path.join(ROOT, 'js', 'manager.js')));
 
 // Rate Limiting
 const apiLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' } });
@@ -61,7 +64,11 @@ function saveJSON(file, data) {
 }
 
 // ===== 날짜별 로그 파일 =====
-function todayStr() { return new Date().toISOString().slice(0, 10); }
+function todayStr() {
+    const now = new Date();
+    const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
+    return kst.toISOString().slice(0, 10);
+}
 
 function getLogFile(prefix) {
     return path.join(LOG_DIR, `${prefix}_${todayStr()}.log`);

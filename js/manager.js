@@ -16,18 +16,10 @@
                 if (res.ok) return;
             } catch {}
         }
-        // 토큰 없거나 만료 → 자동 로그인 시도
-        try {
-            const res = await fetch('/api/auth/login', {
-                method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: 'AD', pw: 'roqkfwk00' })
-            });
-            const data = await res.json();
-            if (data.success) {
-                authToken = data.token;
-                localStorage.setItem('admin_token', authToken);
-            }
-        } catch {}
+        // 토큰 없거나 만료 → 로그인 페이지로 이동
+        authToken = null;
+        localStorage.removeItem('admin_token');
+        window.location.href = '/index.html';
     }
 
     // --- 페이지 전환 ---
@@ -55,7 +47,7 @@
         if (confirm('로그아웃 하시겠습니까?')) {
             authToken = null;
             localStorage.removeItem('admin_token');
-            window.location.href = '/parking-portal/index.html';
+            window.location.href = '/index.html';
         }
     });
 
