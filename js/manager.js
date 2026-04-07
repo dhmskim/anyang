@@ -16,10 +16,29 @@
                 if (res.ok) return;
             } catch {}
         }
-        // 토큰 없거나 만료 → 로그인 페이지로 이동
+        // 토큰 없거나 만료 → 로그인 프롬프트
         authToken = null;
         localStorage.removeItem('admin_token');
-        window.location.href = '/';
+        const id = prompt('관리자 아이디를 입력하세요:');
+        const pw = prompt('비밀번호를 입력하세요:');
+        if (!id || !pw) { document.body.innerHTML = '<h2 style="text-align:center;margin-top:100px">로그인이 필요합니다. 새로고침 후 다시 시도해주세요.</h2>'; return; }
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, pw })
+            });
+            const data = await res.json();
+            if (data.success && data.user.role === 'admin') {
+                authToken = data.token;
+                localStorage.setItem('admin_token', authToken);
+                return;
+            }
+            alert(data.error || '관리자 계정이 아닙니다.');
+            document.body.innerHTML = '<h2 style="text-align:center;margin-top:100px">로그인 실패. 새로고침 후 다시 시도해주세요.</h2>';
+        } catch {
+            alert('서버에 연결할 수 없습니다.');
+            document.body.innerHTML = '<h2 style="text-align:center;margin-top:100px">서버 연결 실패</h2>';
+        }
     }
 
     // --- 페이지 전환 ---
@@ -47,7 +66,7 @@
         if (confirm('로그아웃 하시겠습니까?')) {
             authToken = null;
             localStorage.removeItem('admin_token');
-            window.location.href = '/';
+            window.location.reload();
         }
     });
 
