@@ -106,7 +106,7 @@ app.use('/api/tts', ttsLimiter);
 // ===== 입력 검증 헬퍼 =====
 const VALID_SESSION_ID = /^[a-f0-9-]{36}$|^session_[a-z0-9]{6,20}$/;
 const VALID_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const VALID_CAR = /^\d{2,3}[가-힣]\d{4}$/;
+const VALID_CAR = /^(\d{2,3}[가-힣]\d{4}|[가-힣]{2}\d{2,3}[가-힣]\d{4})$/;
 const VALID_CONFIRM_NO = /^AY[A-Fa-f0-9]{10,30}$/;
 const MAX_CHAT_LENGTH = 500;
 const MAX_TTS_LENGTH = 1000;
@@ -181,30 +181,26 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const LOG_DIR = path.join(DATA_DIR, 'logs');
 if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
 
-let fileLocks = {};
-
 function loadJSON(file) {
     if (!fs.existsSync(file)) return {};
     try { return JSON.parse(fs.readFileSync(file, 'utf-8')); } catch { return {}; }
 }
 
+// 원자적 파일 저장 (tmp + rename), 비동기 큐로 race condition 방지
+const writeQueues = {};
 function saveJSON(file, data) {
-    if (fileLocks[file]) return;
-    fileLocks[file] = true;
-    try {
+    if (!writeQueues[file]) writeQueues[file] = Promise.resolve();
+    writeQueues[file] = writeQueues[file].then(async () => {
         const tmp = file + '.tmp';
-        fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf-8');
-        fs.renameSync(tmp, file);
-    } finally {
-        fileLocks[file] = false;
-    }
+        await fs.promises.writeFile(tmp, JSON.stringify(data, null, 2), 'utf-8');
+        await fs.promises.rename(tmp, file);
+    }).catch(err => console.error('[SaveJSON]', file, err.message));
+    return writeQueues[file];
 }
 
 // ===== 날짜별 로그 파일 =====
 function todayStr() {
-    const now = new Date();
-    const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
-    return kst.toISOString().slice(0, 10);
+    return new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
 }
 
 function getLogFile(prefix) {
@@ -213,7 +209,9 @@ function getLogFile(prefix) {
 
 function appendLog(prefix, entry) {
     const line = JSON.stringify({ ...entry, _ts: new Date().toISOString() }) + '\n';
-    fs.appendFileSync(getLogFile(prefix), line, 'utf-8');
+    fs.promises.appendFile(getLogFile(prefix), line, 'utf-8').catch(err =>
+        console.error('[Log]', err.message)
+    );
 }
 
 function readLogLines(prefix, date) {
@@ -291,6 +289,20 @@ function loadUsers() {
 function saveUsers() { saveJSON(USERS_FILE, { users }); }
 let users = loadUsers();
 
+// ===== 예약 영속성 (파일 기반) =====
+const RESERVATIONS_FILE = path.join(DATA_DIR, 'reservations.json');
+
+function loadReservations() {
+    if (!fs.existsSync(RESERVATIONS_FILE)) return [];
+    try {
+        const data = JSON.parse(fs.readFileSync(RESERVATIONS_FILE, 'utf-8'));
+        return Array.isArray(data) ? data : [];
+    } catch { return []; }
+}
+
+function saveReservations() { saveJSON(RESERVATIONS_FILE, reservations); }
+let reservations = loadReservations();
+
 // 타이밍 공격 방어용 더미 해시 (서버 시작 시 1회 생성)
 const DUMMY_HASH = bcrypt.hashSync('dummy-timing-defense', 12);
 
@@ -320,7 +332,7 @@ function adminOnly(req, res, next) {
 }
 
 // 로그인
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     const { id, pw } = req.body;
     if (!id || !pw) return res.status(400).json({ error: '아이디와 비밀번호를 입력해주세요.' });
     if (typeof id !== 'string' || typeof pw !== 'string') return res.status(400).json({ error: '잘못된 요청입니다.' });
@@ -335,7 +347,7 @@ app.post('/api/auth/login', (req, res) => {
     const user = users.find(u => u.id === id);
     // 타이밍 공격 방어: 유저 미존재 시에도 bcrypt 비교 실행 (응답 시간 균일화)
     const hashToCompare = user ? user.pw : DUMMY_HASH;
-    const pwMatch = bcrypt.compareSync(pw, hashToCompare);
+    const pwMatch = await bcrypt.compare(pw, hashToCompare);
     if (!user || !pwMatch) {
         recordLoginFailure(id);
         auditLog('login_fail', { id, ip: req.ip });
@@ -351,7 +363,7 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 // 회원가입
-app.post('/api/auth/signup', (req, res) => {
+app.post('/api/auth/signup', async (req, res) => {
     const { id, pw, name, phone, car } = req.body;
     if (!id || !pw || !name || !phone) return res.status(400).json({ error: '필수 항목을 입력해주세요.' });
     if (!/^[a-zA-Z0-9]{4,20}$/.test(id)) return res.status(400).json({ error: '아이디는 영문, 숫자 4~20자입니다.' });
@@ -361,8 +373,8 @@ app.post('/api/auth/signup', (req, res) => {
     if (car && !VALID_CAR.test(car)) return res.status(400).json({ error: '차량번호 형식이 올바르지 않습니다.' });
     if (users.find(u => u.id.toLowerCase() === id.toLowerCase())) return res.status(409).json({ error: '이미 존재하는 아이디입니다.' });
 
-    const hash = bcrypt.hashSync(pw, 12);
-    const today = new Date().toISOString().slice(0, 10);
+    const hash = await bcrypt.hash(pw, 12);
+    const today = todayStr();
     users.push({ id, pw: hash, name, phone, car: car || '', role: 'user', status: 'active', joinDate: today });
     saveUsers();
     res.json({ success: true });
@@ -378,7 +390,7 @@ app.get('/api/auth/check-id/:id', checkIdLimiter, (req, res) => {
 });
 
 // 관리자 회원가입 (승인 대기)
-app.post('/api/auth/admin-signup', (req, res) => {
+app.post('/api/auth/admin-signup', async (req, res) => {
     const { id, pw, name, phone } = req.body;
     if (!id || !pw || !name || !phone) return res.status(400).json({ error: '필수 항목을 입력해주세요.' });
     if (!/^[a-zA-Z0-9]{4,20}$/.test(id)) return res.status(400).json({ error: '아이디는 영문, 숫자 4~20자입니다.' });
@@ -387,8 +399,8 @@ app.post('/api/auth/admin-signup', (req, res) => {
     if (!/^01[016789]-?\d{3,4}-?\d{4}$/.test(phone)) return res.status(400).json({ error: '올바른 전화번호를 입력해주세요.' });
     if (users.find(u => u.id.toLowerCase() === id.toLowerCase())) return res.status(409).json({ error: '이미 존재하는 아이디입니다.' });
 
-    const hash = bcrypt.hashSync(pw, 12);
-    const today = new Date().toISOString().slice(0, 10);
+    const hash = await bcrypt.hash(pw, 12);
+    const today = todayStr();
     users.push({ id, pw: hash, name, phone, car: '', role: 'admin', status: 'pending', joinDate: today });
     saveUsers();
     res.json({ success: true, message: '가입 신청이 완료되었습니다. 최고관리자 승인 후 로그인 가능합니다.' });
@@ -425,7 +437,7 @@ app.get('/api/admin/users', authMiddleware, adminOnly, (req, res) => {
     res.json(users.map(u => ({ ...u, pw: undefined })));
 });
 
-app.post('/api/admin/users', authMiddleware, adminOnly, (req, res) => {
+app.post('/api/admin/users', authMiddleware, adminOnly, async (req, res) => {
     const { id, pw, name, phone, car, role, status } = req.body;
     if (!id || !pw || !name || !phone) return res.status(400).json({ error: '필수 항목 누락' });
     if (!/^[a-zA-Z0-9]{4,20}$/.test(id)) return res.status(400).json({ error: '아이디는 영문, 숫자 4~20자입니다.' });
@@ -437,15 +449,15 @@ app.post('/api/admin/users', authMiddleware, adminOnly, (req, res) => {
     if (role && !validRoles.includes(role)) return res.status(400).json({ error: '올바르지 않은 역할입니다.' });
     if (status && !validStatuses.includes(status)) return res.status(400).json({ error: '올바르지 않은 상태입니다.' });
     if (users.find(u => u.id.toLowerCase() === id.toLowerCase())) return res.status(409).json({ error: '중복 아이디' });
-    const hash = bcrypt.hashSync(pw, 12);
-    const today = new Date().toISOString().slice(0, 10);
+    const hash = await bcrypt.hash(pw, 12);
+    const today = todayStr();
     users.push({ id, pw: hash, name, phone, car: car || '', role: role || 'user', status: status || 'active', joinDate: today });
     saveUsers();
     auditLog('admin_create_user', { targetId: id, role: role || 'user', by: req.user.id });
     res.json({ success: true });
 });
 
-app.put('/api/admin/users/:id', authMiddleware, adminOnly, (req, res) => {
+app.put('/api/admin/users/:id', authMiddleware, adminOnly, async (req, res) => {
     const user = users.find(u => u.id === req.params.id);
     if (!user) return res.status(404).json({ error: '유저 없음' });
     const { name, phone, car, role, status, pw } = req.body;
@@ -469,7 +481,7 @@ app.put('/api/admin/users/:id', authMiddleware, adminOnly, (req, res) => {
     if (status && validStatuses.includes(status)) user.status = status;
     if (pw) {
         if (!isStrongPassword(pw)) return res.status(400).json({ error: '비밀번호는 8자 이상, 영문/숫자/특수문자 중 2종 이상 포함해야 합니다.' });
-        user.pw = bcrypt.hashSync(pw, 12);
+        user.pw = await bcrypt.hash(pw, 12);
     }
     saveUsers();
     auditLog('admin_update_user', { targetId: req.params.id, by: req.user.id });
@@ -493,7 +505,7 @@ function getConv(sessionId) {
     if (!conversations[sessionId]) {
         conversations[sessionId] = {
             sessionId, createdAt: new Date().toISOString(),
-            messages: [], reservations: [], counselorRequested: false
+            messages: [], counselorRequested: false
         };
     }
     return conversations[sessionId];
@@ -511,29 +523,30 @@ function getHistory(sessionId, maxTurns = 10) {
     return msgs.slice(-maxTurns * 2).map(m => ({ role: m.role, content: m.content }));
 }
 
-// ===== Mock 주차장 데이터 =====
+// ===== 주차장 가용 현황 (실제 예약 기반) =====
+const TOTAL_SPACES = 50;
+
 function generateAvailability() {
     const data = {};
-    const today = new Date();
+    const todayDate = todayStr();
     for (let i = 1; i <= 7; i++) {
-        const d = new Date(today);
+        const d = new Date(todayDate + 'T00:00:00+09:00');
         d.setDate(d.getDate() + i);
-        const key = d.toISOString().split('T')[0];
+        const key = d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
         const dayOfWeek = d.getDay();
         if (dayOfWeek === 1) {
-            data[key] = { total: 50, reserved: 50, available: 0, closed: true, closedReason: '휴원일 (매주 월요일)' };
+            data[key] = { total: TOTAL_SPACES, reserved: TOTAL_SPACES, available: 0, closed: true, closedReason: '휴원일 (매주 월요일)' };
         } else {
-            const reserved = dayOfWeek === 0 || dayOfWeek === 6
-                ? Math.floor(Math.random() * 15) + 38
-                : Math.floor(Math.random() * 20) + 15;
-            data[key] = { total: 50, reserved: Math.min(reserved, 50), available: Math.max(50 - reserved, 0), closed: false };
+            const confirmedCount = reservations.filter(r => r.date === key && r.status === 'confirmed').length;
+            data[key] = { total: TOTAL_SPACES, reserved: confirmedCount, available: Math.max(TOTAL_SPACES - confirmedCount, 0), closed: false };
         }
     }
     return data;
 }
 
 let parkingData = generateAvailability();
-setInterval(() => { parkingData = generateAvailability(); }, 5 * 60 * 1000);
+// 가용 현황 주기적 갱신 (날짜 변경 반영)
+setInterval(() => { parkingData = generateAvailability(); }, 60 * 1000);
 
 // ===== API: 잔여 현황 =====
 app.get('/api/availability', (req, res) => res.json(parkingData));
@@ -569,46 +582,38 @@ app.post('/api/reserve', reserveLimiter, (req, res) => {
     if (info.closed) return res.status(400).json({ error: `${info.closedReason}으로 예약할 수 없습니다.` });
     if (info.available <= 0) return res.status(400).json({ error: '해당 날짜는 만차입니다.' });
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayStr();
     if (date <= today) return res.status(400).json({ error: '당일 예약은 불가합니다.' });
 
-    // 차량번호 기반 월 1회 제한 (전체 세션 대상, sessionId 변경으로 우회 불가)
+    // 차량번호 기반 월 1회 제한 (영속 데이터 기반, 서버 재시작 후에도 유지)
     const month = date.slice(0, 7);
-    const allConvs = Object.values(conversations);
-    const carAlreadyReserved = allConvs.some(c =>
-        c.reservations.some(r => r.carNumber === carNumber && r.date.startsWith(month) && r.status === 'confirmed')
+    const carAlreadyReserved = reservations.some(r =>
+        r.carNumber === carNumber && r.date.startsWith(month) && r.status === 'confirmed'
     );
     if (carAlreadyReserved) return res.status(400).json({ error: '해당 차량은 이번 달 이미 예약이 있습니다. (월 1회 제한)' });
 
     // 같은 날짜 + 같은 차량 중복 예약 방지
-    const carSameDateReserved = allConvs.some(c =>
-        c.reservations.some(r => r.carNumber === carNumber && r.date === date && r.status === 'confirmed')
+    const carSameDateReserved = reservations.some(r =>
+        r.carNumber === carNumber && r.date === date && r.status === 'confirmed'
     );
     if (carSameDateReserved) return res.status(400).json({ error: '해당 차량은 이미 같은 날짜에 예약되어 있습니다.' });
-
-    const conv = getConv(sessionId);
 
     const disc = DISCOUNTS[discountId] || DISCOUNTS.none;
     const amount = disc.amount;
     const userType = userId ? 'member' : 'guest';
 
-    info.reserved++;
-    info.available = Math.max(info.available - 1, 0);
-
     const confirmNo = 'AY' + crypto.randomBytes(12).toString('hex').toUpperCase();
-    const reservation = { confirmNo, date, carNumber, amount, discountId: discountId || 'none', status: 'confirmed', createdAt: new Date().toISOString() };
-    conv.reservations.push(reservation);
+    const reservation = { confirmNo, date, carNumber, amount, discountId: discountId || 'none', status: 'confirmed', createdAt: new Date().toISOString(), sessionId, userName: userName || null, userId: userId || null };
+    reservations.push(reservation);
+    saveReservations();
+    // 가용 현황 즉시 갱신
+    parkingData = generateAvailability();
+
     appendLog('reserve', {
-        confirmNo,
-        action: 'confirm',
-        userType,
-        userId: userId || null,
-        userName: userName || null,
-        date,
-        carNumber,
-        discountId: discountId || 'none',
-        amount,
-        sessionId: sessionId || 'unknown'
+        confirmNo, action: 'confirm', userType,
+        userId: userId || null, userName: userName || null,
+        date, carNumber, discountId: discountId || 'none',
+        amount, sessionId
     });
 
     res.json({ success: true, reservation });
@@ -620,31 +625,25 @@ app.post('/api/cancel', cancelLimiter, (req, res) => {
     const { confirmNo } = req.body;
     if (!confirmNo || !VALID_CONFIRM_NO.test(confirmNo)) return res.status(400).json({ error: '확인번호 형식이 올바르지 않습니다.' });
 
-    // 전체 세션에서 confirmNo 검색 (sessionId 우회 방지)
-    let reservation = null;
-    let ownerSessionId = null;
-    for (const [sid, conv] of Object.entries(conversations)) {
-        const found = conv.reservations.find(r => r.confirmNo === confirmNo && r.status === 'confirmed');
-        if (found) { reservation = found; ownerSessionId = sid; break; }
-    }
+    // 영속 예약 데이터에서 검색 (서버 재시작 후에도 취소 가능)
+    const reservation = reservations.find(r => r.confirmNo === confirmNo && r.status === 'confirmed');
     if (!reservation) return res.status(404).json({ error: '해당 확인번호의 예약을 찾을 수 없습니다.' });
 
-    const now = new Date();
-    const deadline = new Date(reservation.date + 'T09:00:00');
-    deadline.setDate(deadline.getDate() - 1);
-    deadline.setHours(18, 0, 0, 0);
-    if (now > deadline) return res.status(400).json({ error: '취소 기한(방문 전날 18:00)이 지났습니다.' });
+    // 취소 기한: 방문 전날 18:00 KST
+    const reserveDate = new Date(reservation.date + 'T00:00:00+09:00');
+    const deadline = new Date(reserveDate.getTime() - 6 * 60 * 60 * 1000); // 전날 18:00 KST
+    if (new Date() > deadline) return res.status(400).json({ error: '취소 기한(방문 전날 18:00)이 지났습니다.' });
 
     reservation.status = 'cancelled';
-    const info = parkingData[reservation.date];
-    if (info) { info.reserved = Math.max(info.reserved - 1, 0); info.available = Math.min(info.available + 1, info.total); }
+    reservation.cancelledAt = new Date().toISOString();
+    saveReservations();
+    // 가용 현황 즉시 갱신
+    parkingData = generateAvailability();
+
     appendLog('reserve', {
-        confirmNo,
-        action: 'cancel',
-        date: reservation.date,
-        carNumber: reservation.carNumber,
-        sessionId: ownerSessionId,
-        ip: req.ip
+        confirmNo, action: 'cancel',
+        date: reservation.date, carNumber: reservation.carNumber,
+        sessionId: reservation.sessionId, ip: req.ip
     });
 
     res.json({ success: true, message: `예약(${confirmNo})이 취소되었습니다. 환불은 3~5 영업일 내 처리됩니다.` });
@@ -669,6 +668,9 @@ app.post('/api/counselor', counselorLimiter, (req, res) => {
 
 // ===== 관리자 API (인증 필요) =====
 app.get('/api/admin/conversations', authMiddleware, adminOnly, (req, res) => {
+    const page = Math.max(1, parseInt(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 50));
+
     const list = Object.values(conversations).map(c => ({
         sessionId: c.sessionId, createdAt: c.createdAt,
         messageCount: c.messages.length,
@@ -676,7 +678,10 @@ app.get('/api/admin/conversations', authMiddleware, adminOnly, (req, res) => {
         counselorRequested: c.counselorRequested
     }));
     list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    res.json(list);
+
+    const total = list.length;
+    const paginated = list.slice((page - 1) * limit, page * limit);
+    res.json({ data: paginated, total, page, limit, totalPages: Math.ceil(total / limit) });
 });
 
 app.get('/api/admin/conversations/:sessionId', authMiddleware, adminOnly, (req, res) => {
@@ -943,7 +948,7 @@ app.post('/api/chat', async (req, res) => {
         }
 
         clearTimeout(timeout);
-        addMessage(sessionId, 'assistant', fullResponse);
+        if (fullResponse.trim()) addMessage(sessionId, 'assistant', fullResponse);
         res.write('data: [DONE]\n\n');
         res.end();
     } catch (err) {

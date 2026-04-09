@@ -325,9 +325,10 @@
     async function loadConversations() {
         const list = document.getElementById('convList');
         try {
-            const res = await fetch('/api/admin/conversations', { headers: authHeaders() });
+            const res = await fetch('/api/admin/conversations?limit=50', { headers: authHeaders() });
             if (!res.ok) return;
-            const data = await res.json();
+            const result = await res.json();
+            const data = result.data || result; // 페이지네이션 응답 호환
             if (data.length === 0) { list.innerHTML = '<div class="empty-state">대화 내역이 없습니다.</div>'; return; }
             list.innerHTML = data.map(c => {
                 const isRead = readMessages[c.sessionId];

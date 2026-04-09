@@ -108,10 +108,10 @@
                         while (child.firstChild) child.parentNode.insertBefore(child.firstChild, child);
                         child.parentNode.removeChild(child);
                     } else {
-                        // 허용된 태그: style 속성만 허용, 나머지 제거
+                        // 허용된 태그: 모든 속성 제거 (XSS/CSS injection 방지)
                         const attrs = Array.from(child.attributes);
                         for (const attr of attrs) {
-                            if (attr.name !== 'style') child.removeAttribute(attr.name);
+                            child.removeAttribute(attr.name);
                         }
                         clean(child);
                     }
@@ -310,7 +310,7 @@
 
     function inputCarNumber(carNumber) {
         if (carNumber === '등록차량' && window.currentUser && window.currentUser.car) carNumber = window.currentUser.car;
-        if (!/^\d{2,3}[가-힣]\d{4}$/.test(carNumber)) { addMsg('차량번호 형식을 확인해 주세요. (예: 12가3456, 123가4567)', 'bot'); return; }
+        if (!/^(\d{2,3}[가-힣]\d{4}|[가-힣]{2}\d{2,3}[가-힣]\d{4})$/.test(carNumber)) { addMsg('차량번호 형식을 확인해 주세요. (예: 12가3456, 경기12아3456)', 'bot'); return; }
         reserveState.carNumber = carNumber;
         reserveState.step = 'discount';
         addMsg(carNumber, 'user');

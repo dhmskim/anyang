@@ -89,10 +89,13 @@ async function buildVectors() {
     const newStore = [];
     let cached = 0, embedded = 0;
 
+    const BATCH_SIZE = 5;
+
     for (const file of files) {
         const content = fs.readFileSync(path.join(KNOWLEDGE_DIR, file), 'utf-8');
         const chunks = splitChunks(file, content);
 
+        const needsEmbed = [];
         for (const chunk of chunks) {
             const cacheKey = chunk.source + '::' + chunk.heading;
 
@@ -101,10 +104,18 @@ async function buildVectors() {
                 newStore.push({ ...chunk, embedding: cache[cacheKey].embedding });
                 cached++;
             } else {
-                const embedding = await getEmbedding(chunk.text);
-                newStore.push({ ...chunk, embedding });
-                embedded++;
+                needsEmbed.push(chunk);
             }
+        }
+
+        // 병렬 임베딩 (BATCH_SIZE개씩)
+        for (let i = 0; i < needsEmbed.length; i += BATCH_SIZE) {
+            const batch = needsEmbed.slice(i, i + BATCH_SIZE);
+            const embeddings = await Promise.all(batch.map(c => getEmbedding(c.text)));
+            batch.forEach((c, j) => {
+                newStore.push({ ...c, embedding: embeddings[j] });
+                embedded++;
+            });
         }
     }
 
