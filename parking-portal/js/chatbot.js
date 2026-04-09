@@ -93,12 +93,43 @@
         if ((scrollTop === 0 && e.deltaY < 0) || (scrollTop + clientHeight >= scrollHeight && e.deltaY > 0)) e.preventDefault();
     }, { passive: false });
 
-    // --- 메시지 헬퍼 (XSS: bot 메시지는 innerHTML 허용 - 서버 응답, user는 textContent) ---
+    // --- 허용 HTML 태그만 통과 (XSS 방어) ---
+    const ALLOWED_TAGS = ['strong', 'em', 'br', 's', 'small', 'b', 'i', 'span', 'div'];
+    function sanitizeHtml(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        function clean(node) {
+            const children = Array.from(node.childNodes);
+            for (const child of children) {
+                if (child.nodeType === 3) continue; // text node OK
+                if (child.nodeType === 1) {
+                    const tag = child.tagName.toLowerCase();
+                    if (!ALLOWED_TAGS.includes(tag)) {
+                        // 허용되지 않은 태그: 자식만 유지, 태그 제거
+                        while (child.firstChild) child.parentNode.insertBefore(child.firstChild, child);
+                        child.parentNode.removeChild(child);
+                    } else {
+                        // 허용된 태그: style 속성만 허용, 나머지 제거
+                        const attrs = Array.from(child.attributes);
+                        for (const attr of attrs) {
+                            if (attr.name !== 'style') child.removeAttribute(attr.name);
+                        }
+                        clean(child);
+                    }
+                } else {
+                    child.parentNode.removeChild(child);
+                }
+            }
+        }
+        clean(doc.body);
+        return doc.body.innerHTML;
+    }
+
+    // --- 메시지 헬퍼 (XSS: 모든 HTML 태그 허용 목록으로 제한) ---
     function addMsg(text, type, autoSpeak = true) {
         const div = document.createElement('div');
         div.className = 'chat-msg ' + type;
         if (type === 'user') div.textContent = text;
-        else div.innerHTML = text;
+        else div.innerHTML = sanitizeHtml(text);
         chatbotBody.appendChild(div);
         chatbotBody.scrollTop = chatbotBody.scrollHeight;
         if (type === 'bot' && text) { addSpeakBtn(div); if (autoSpeak) speak(text); }
@@ -108,6 +139,7 @@
     function addWidget(html) {
         const div = document.createElement('div');
         div.className = 'chat-widget';
+        // 위젯은 내부 생성 HTML이므로 button/data-* 속성도 허용
         div.innerHTML = html;
         chatbotBody.appendChild(div);
         chatbotBody.scrollTop = chatbotBody.scrollHeight;
@@ -123,7 +155,24 @@
         return div;
     }
 
+    // --- 간이 마크다운 → HTML 변환 ---
+    function miniMarkdown(text) {
+        return escapeHtml(text)
+            .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*(.+?)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br>');
+    }
+
     // --- AI 스트리밍 ---
+    let scrollRAF = null;
+    function scrollToBottom() {
+        if (scrollRAF) return;
+        scrollRAF = requestAnimationFrame(() => {
+            chatbotBody.scrollTop = chatbotBody.scrollHeight;
+            scrollRAF = null;
+        });
+    }
+
     async function sendToAI(text, showUser = true) {
         if (isSending) return;
         isSending = true;
@@ -135,9 +184,21 @@
             typing.remove();
             const botDiv = addMsg('', 'bot', false);
             let fullText = '';
+            let renderTimer = null;
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let buffer = '';
+
+            function renderNow() {
+                botDiv.innerHTML = miniMarkdown(fullText);
+                scrollToBottom();
+                renderTimer = null;
+            }
+
+            function scheduleRender() {
+                if (!renderTimer) renderTimer = requestAnimationFrame(renderNow);
+            }
+
             while (true) {
                 const { done, value } = await reader.read();
                 if (done) break;
@@ -150,12 +211,16 @@
                     if (data === '[DONE]') break;
                     try {
                         const p = JSON.parse(data);
-                        if (p.error) { fullText = p.error; botDiv.textContent = fullText; }
-                        else if (p.token) { fullText += p.token; botDiv.textContent = fullText; chatbotBody.scrollTop = chatbotBody.scrollHeight; }
+                        if (p.error) { fullText = p.error; renderNow(); }
+                        else if (p.token) { fullText += p.token; scheduleRender(); }
                     } catch {}
                 }
             }
+
+            // 최종 렌더링
+            if (renderTimer) { cancelAnimationFrame(renderTimer); renderTimer = null; }
             if (!fullText) botDiv.textContent = '응답을 받지 못했습니다. 다시 시도해주세요.';
+            else { botDiv.innerHTML = miniMarkdown(fullText); addSpeakBtn(botDiv); scrollToBottom(); }
             if (fullText) speak(fullText);
         } catch { typing.remove(); addMsg('서버에 연결할 수 없습니다.', 'bot'); }
         isSending = false; chatbotInput.disabled = false; chatbotSend.disabled = false; chatbotInput.focus();
@@ -358,6 +423,7 @@
     function handleSend() {
         const text = chatbotInput.value.trim();
         if (!text) return;
+        if (text.length > 500) { addMsg('메시지는 500자 이내로 입력해주세요.', 'bot'); return; }
         chatbotInput.value = '';
 
         // 의도 키워드 우선 감지 (플로우 중에도)

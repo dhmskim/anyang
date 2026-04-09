@@ -448,8 +448,9 @@
         setInterval(() => { loadConversations(); loadCounselorRequests(); }, 30000);
     }
 
-    window.loadConversations = loadConversations;
-    window.loadCounselorRequests = loadCounselorRequests;
+    // 새로고침 버튼 이벤트 (inline onclick 제거 → CSP 강화)
+    document.getElementById('refreshConvBtn').addEventListener('click', loadConversations);
+    document.getElementById('refreshCounselorBtn').addEventListener('click', loadCounselorRequests);
 
     // ===== 시작 =====
     ensureAuth().then(ok => {
